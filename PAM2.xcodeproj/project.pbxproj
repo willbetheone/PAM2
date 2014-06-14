@@ -12,13 +12,26 @@
 		150CB1CB1948E6B900636103 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB1CA1948E6B900636103 /* UIKit.framework */; };
 		150CB1D11948E6B900636103 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 150CB1CF1948E6B900636103 /* InfoPlist.strings */; };
 		150CB1D31948E6B900636103 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 150CB1D21948E6B900636103 /* main.m */; };
-		150CB1D71948E6B900636103 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 150CB1D61948E6B900636103 /* AppDelegate.m */; };
+		150CB1D71948E6B900636103 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB1D61948E6B900636103 /* AppDelegate.mm */; };
 		150CB1D91948E6B900636103 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 150CB1D81948E6B900636103 /* Images.xcassets */; };
 		150CB1E01948E6B900636103 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB1DF1948E6B900636103 /* XCTest.framework */; };
 		150CB1E11948E6B900636103 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB1C61948E6B800636103 /* Foundation.framework */; };
 		150CB1E21948E6B900636103 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB1CA1948E6B900636103 /* UIKit.framework */; };
 		150CB1EA1948E6B900636103 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 150CB1E81948E6B900636103 /* InfoPlist.strings */; };
 		150CB1EC1948E6B900636103 /* PAM2Tests.m in Sources */ = {isa = PBXBuildFile; fileRef = 150CB1EB1948E6B900636103 /* PAM2Tests.m */; };
+		150CB20F1948F02100636103 /* libGEL-iOS Static Library.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2081948EFD900636103 /* libGEL-iOS Static Library.a */; };
+		150CB2131948F86B00636103 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2121948F86B00636103 /* OpenGLES.framework */; };
+		150CB2151948F88900636103 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2141948F88900636103 /* GLKit.framework */; };
+		150CB2221949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
+		150CB2231949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
+		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
+		15B8A422194CD1D900CD578C /* RAShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */; };
+		15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */; };
+		15B8A426194CD1E600CD578C /* TempMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A424194CD1E600CD578C /* TempMesh.cpp */; };
+		15B8A429194CD28900CD578C /* Shader.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8A427194CD28900CD578C /* Shader.fsh */; };
+		15B8A42A194CD28900CD578C /* Shader.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8A428194CD28900CD578C /* Shader.vsh */; };
+		15B8A435194CD64200CD578C /* BasePAMViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A432194CD64200CD578C /* BasePAMViewController.mm */; };
+		15B8A436194CD64200CD578C /* PAMViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A434194CD64200CD578C /* PAMViewController.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,6 +41,41 @@
 			proxyType = 1;
 			remoteGlobalIDString = 150CB1C21948E6B800636103;
 			remoteInfo = PAM2;
+		};
+		150CB2051948EFD900636103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1AAD577B17F4DAE80064BA71;
+			remoteInfo = "GEL-iOS";
+		};
+		150CB2071948EFD900636103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A9433DE17F4E7A3007FAC88;
+			remoteInfo = "GEL-iOS Static Library";
+		};
+		150CB2091948EFD900636103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1AAD579617F4DAE80064BA71;
+			remoteInfo = "GEL-iOSTests";
+		};
+		150CB20B1948EFD900636103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 1A9433EB17F4E7A3007FAC88;
+			remoteInfo = "GEL-iOS Static LibraryTests";
+		};
+		150CB20D1948F01D00636103 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 1A9433DD17F4E7A3007FAC88;
+			remoteInfo = "GEL-iOS Static Library";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -41,13 +89,32 @@
 		150CB1D21948E6B900636103 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		150CB1D41948E6B900636103 /* PAM2-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "PAM2-Prefix.pch"; sourceTree = "<group>"; };
 		150CB1D51948E6B900636103 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		150CB1D61948E6B900636103 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		150CB1D61948E6B900636103 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
 		150CB1D81948E6B900636103 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
 		150CB1DE1948E6B900636103 /* PAM2Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = PAM2Tests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		150CB1DF1948E6B900636103 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = Library/Frameworks/XCTest.framework; sourceTree = DEVELOPER_DIR; };
 		150CB1E71948E6B900636103 /* PAM2Tests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "PAM2Tests-Info.plist"; sourceTree = "<group>"; };
 		150CB1E91948E6B900636103 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		150CB1EB1948E6B900636103 /* PAM2Tests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = PAM2Tests.m; sourceTree = "<group>"; };
+		150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "GEL-iOS.xcodeproj"; path = "GEL-iOS/GEL-iOS/GEL-iOS.xcodeproj"; sourceTree = "<group>"; };
+		150CB2121948F86B00636103 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
+		150CB2141948F88900636103 /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
+		150CB2201949019000636103 /* PAMManifold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PAMManifold.cpp; path = Source/PAMManifold.cpp; sourceTree = "<group>"; };
+		150CB2211949019000636103 /* PAMManifold.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PAMManifold.h; path = Source/PAMManifold.h; sourceTree = "<group>"; };
+		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
+		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; };
+		15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAShaderProgram.cpp; path = Source/RAEngine/Core/RAShaderProgram.cpp; sourceTree = "<group>"; };
+		15B8A41E194CD1D900CD578C /* RAShaderProgram.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAShaderProgram.h; path = Source/RAEngine/Core/RAShaderProgram.h; sourceTree = "<group>"; };
+		15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAVertexAttribBuffer.cpp; path = Source/RAEngine/Core/RAVertexAttribBuffer.cpp; sourceTree = "<group>"; };
+		15B8A420194CD1D900CD578C /* RAVertexAttribBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAVertexAttribBuffer.h; path = Source/RAEngine/Core/RAVertexAttribBuffer.h; sourceTree = "<group>"; };
+		15B8A424194CD1E600CD578C /* TempMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TempMesh.cpp; path = Source/RAEngine/Temp/TempMesh.cpp; sourceTree = "<group>"; };
+		15B8A425194CD1E600CD578C /* TempMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TempMesh.h; path = Source/RAEngine/Temp/TempMesh.h; sourceTree = "<group>"; };
+		15B8A427194CD28900CD578C /* Shader.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.fsh; path = Source/RAEngine/Shaders/Shader.fsh; sourceTree = "<group>"; };
+		15B8A428194CD28900CD578C /* Shader.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.vsh; path = Source/RAEngine/Shaders/Shader.vsh; sourceTree = "<group>"; };
+		15B8A431194CD64200CD578C /* BasePAMViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasePAMViewController.h; sourceTree = "<group>"; };
+		15B8A432194CD64200CD578C /* BasePAMViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = BasePAMViewController.mm; sourceTree = "<group>"; };
+		15B8A433194CD64200CD578C /* PAMViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PAMViewController.h; sourceTree = "<group>"; };
+		15B8A434194CD64200CD578C /* PAMViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = PAMViewController.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +122,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				150CB2151948F88900636103 /* GLKit.framework in Frameworks */,
+				150CB2131948F86B00636103 /* OpenGLES.framework in Frameworks */,
+				150CB20F1948F02100636103 /* libGEL-iOS Static Library.a in Frameworks */,
 				150CB1C91948E6B800636103 /* CoreGraphics.framework in Frameworks */,
 				150CB1CB1948E6B900636103 /* UIKit.framework in Frameworks */,
 				150CB1C71948E6B800636103 /* Foundation.framework in Frameworks */,
@@ -77,6 +147,7 @@
 		150CB1BA1948E6B800636103 = {
 			isa = PBXGroup;
 			children = (
+				150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */,
 				150CB1CC1948E6B900636103 /* PAM2 */,
 				150CB1E51948E6B900636103 /* PAM2Tests */,
 				150CB1C51948E6B800636103 /* Frameworks */,
@@ -96,6 +167,8 @@
 		150CB1C51948E6B800636103 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				150CB2141948F88900636103 /* GLKit.framework */,
+				150CB2121948F86B00636103 /* OpenGLES.framework */,
 				150CB1C61948E6B800636103 /* Foundation.framework */,
 				150CB1C81948E6B800636103 /* CoreGraphics.framework */,
 				150CB1CA1948E6B900636103 /* UIKit.framework */,
@@ -108,7 +181,10 @@
 			isa = PBXGroup;
 			children = (
 				150CB1D51948E6B900636103 /* AppDelegate.h */,
-				150CB1D61948E6B900636103 /* AppDelegate.m */,
+				150CB1D61948E6B900636103 /* AppDelegate.mm */,
+				15B93157194A821E0020FA2D /* ViewControllers */,
+				15C649601949393D00640630 /* RAEngine */,
+				150CB21F1949013C00636103 /* Source */,
 				150CB1D81948E6B900636103 /* Images.xcassets */,
 				150CB1CD1948E6B900636103 /* Supporting Files */,
 			);
@@ -144,6 +220,78 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		150CB1FF1948EFD900636103 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				150CB2061948EFD900636103 /* GEL-iOS.app */,
+				150CB2081948EFD900636103 /* libGEL-iOS Static Library.a */,
+				150CB20A1948EFD900636103 /* GEL-iOSTests.xctest */,
+				150CB20C1948EFD900636103 /* GEL-iOS Static LibraryTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		150CB21F1949013C00636103 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				150CB2211949019000636103 /* PAMManifold.h */,
+				150CB2201949019000636103 /* PAMManifold.cpp */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		15B8A419194CD1AB00CD578C /* Shaders */ = {
+			isa = PBXGroup;
+			children = (
+				15B8A427194CD28900CD578C /* Shader.fsh */,
+				15B8A428194CD28900CD578C /* Shader.vsh */,
+			);
+			name = Shaders;
+			sourceTree = "<group>";
+		};
+		15B8A41A194CD1B500CD578C /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				15B8A41B194CD1D900CD578C /* RAMesh.cpp */,
+				15B8A41C194CD1D900CD578C /* RAMesh.h */,
+				15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */,
+				15B8A41E194CD1D900CD578C /* RAShaderProgram.h */,
+				15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */,
+				15B8A420194CD1D900CD578C /* RAVertexAttribBuffer.h */,
+			);
+			name = Core;
+			sourceTree = "<group>";
+		};
+		15B93153194A81E30020FA2D /* Temp */ = {
+			isa = PBXGroup;
+			children = (
+				15B8A424194CD1E600CD578C /* TempMesh.cpp */,
+				15B8A425194CD1E600CD578C /* TempMesh.h */,
+			);
+			name = Temp;
+			sourceTree = "<group>";
+		};
+		15B93157194A821E0020FA2D /* ViewControllers */ = {
+			isa = PBXGroup;
+			children = (
+				15B8A431194CD64200CD578C /* BasePAMViewController.h */,
+				15B8A432194CD64200CD578C /* BasePAMViewController.mm */,
+				15B8A433194CD64200CD578C /* PAMViewController.h */,
+				15B8A434194CD64200CD578C /* PAMViewController.mm */,
+			);
+			name = ViewControllers;
+			sourceTree = "<group>";
+		};
+		15C649601949393D00640630 /* RAEngine */ = {
+			isa = PBXGroup;
+			children = (
+				15B8A419194CD1AB00CD578C /* Shaders */,
+				15B93153194A81E30020FA2D /* Temp */,
+				15B8A41A194CD1B500CD578C /* Core */,
+			);
+			name = RAEngine;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -158,6 +306,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				150CB20E1948F01D00636103 /* PBXTargetDependency */,
 			);
 			name = PAM2;
 			productName = PAM2;
@@ -191,6 +340,9 @@
 				LastUpgradeCheck = 0510;
 				ORGANIZATIONNAME = "Rinat Abdrashitov";
 				TargetAttributes = {
+					150CB1C21948E6B800636103 = {
+						DevelopmentTeam = S9DA2LPXVJ;
+					};
 					150CB1DD1948E6B900636103 = {
 						TestTargetID = 150CB1C21948E6B800636103;
 					};
@@ -206,6 +358,12 @@
 			mainGroup = 150CB1BA1948E6B800636103;
 			productRefGroup = 150CB1C41948E6B800636103 /* Products */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 150CB1FF1948EFD900636103 /* Products */;
+					ProjectRef = 150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */;
+				},
+			);
 			projectRoot = "";
 			targets = (
 				150CB1C21948E6B800636103 /* PAM2 */,
@@ -214,11 +372,44 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXReferenceProxy section */
+		150CB2061948EFD900636103 /* GEL-iOS.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "GEL-iOS.app";
+			remoteRef = 150CB2051948EFD900636103 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		150CB2081948EFD900636103 /* libGEL-iOS Static Library.a */ = {
+			isa = PBXReferenceProxy;
+			fileType = archive.ar;
+			path = "libGEL-iOS Static Library.a";
+			remoteRef = 150CB2071948EFD900636103 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		150CB20A1948EFD900636103 /* GEL-iOSTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "GEL-iOSTests.xctest";
+			remoteRef = 150CB2091948EFD900636103 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		150CB20C1948EFD900636103 /* GEL-iOS Static LibraryTests.xctest */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.cfbundle;
+			path = "GEL-iOS Static LibraryTests.xctest";
+			remoteRef = 150CB20B1948EFD900636103 /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
+
 /* Begin PBXResourcesBuildPhase section */
 		150CB1C11948E6B800636103 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15B8A42A194CD28900CD578C /* Shader.vsh in Resources */,
+				15B8A429194CD28900CD578C /* Shader.fsh in Resources */,
 				150CB1D11948E6B900636103 /* InfoPlist.strings in Resources */,
 				150CB1D91948E6B900636103 /* Images.xcassets in Resources */,
 			);
@@ -239,8 +430,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				150CB1D71948E6B900636103 /* AppDelegate.m in Sources */,
+				15B8A435194CD64200CD578C /* BasePAMViewController.mm in Sources */,
+				15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */,
+				150CB1D71948E6B900636103 /* AppDelegate.mm in Sources */,
 				150CB1D31948E6B900636103 /* main.m in Sources */,
+				15B8A422194CD1D900CD578C /* RAShaderProgram.cpp in Sources */,
+				15B8A426194CD1E600CD578C /* TempMesh.cpp in Sources */,
+				15B8A436194CD64200CD578C /* PAMViewController.mm in Sources */,
+				150CB2221949019000636103 /* PAMManifold.cpp in Sources */,
+				15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,6 +446,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				150CB2231949019000636103 /* PAMManifold.cpp in Sources */,
 				150CB1EC1948E6B900636103 /* PAM2Tests.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -259,6 +458,11 @@
 			isa = PBXTargetDependency;
 			target = 150CB1C21948E6B800636103 /* PAM2 */;
 			targetProxy = 150CB1E31948E6B900636103 /* PBXContainerItemProxy */;
+		};
+		150CB20E1948F01D00636103 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "GEL-iOS Static Library";
+			targetProxy = 150CB20D1948F01D00636103 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -361,11 +565,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_IDENTITY = "iPhone Developer: Riant Abdrashitov (ZB3W7CDQH4)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "PAM2/PAM2-Prefix.pch";
 				INFOPLIST_FILE = "PAM2/PAM2-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/GEL-iOS/**";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -375,12 +581,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
-				CODE_SIGN_IDENTITY = "iPhone Distribution: Rinat Abdrashitov (S9DA2LPXVJ)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Rinat Abdrashitov (S9DA2LPXVJ)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "PAM2/PAM2-Prefix.pch";
 				INFOPLIST_FILE = "PAM2/PAM2-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/GEL-iOS/**";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;
@@ -444,6 +652,7 @@
 				150CB1F11948E6B900636103 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		150CB1F21948E6B900636103 /* Build configuration list for PBXNativeTarget "PAM2Tests" */ = {
 			isa = XCConfigurationList;
@@ -452,6 +661,7 @@
 				150CB1F41948E6B900636103 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
