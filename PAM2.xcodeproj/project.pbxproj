@@ -24,6 +24,8 @@
 		150CB2151948F88900636103 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2141948F88900636103 /* GLKit.framework */; };
 		150CB2221949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
 		150CB2231949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
+		15922FB1194D598E00EA2DC3 /* DirectionalLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */; };
+		15922FB2194D598E00EA2DC3 /* DirectionalLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
 		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */; };
@@ -102,6 +104,8 @@
 		150CB2201949019000636103 /* PAMManifold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PAMManifold.cpp; path = Source/PAMManifold.cpp; sourceTree = "<group>"; };
 		150CB2211949019000636103 /* PAMManifold.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PAMManifold.h; path = Source/PAMManifold.h; sourceTree = "<group>"; };
 		15922FA7194D1FF400EA2DC3 /* RAEnginePrerequisites.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RAEnginePrerequisites.h; path = Source/RAEngine/Core/RAEnginePrerequisites.h; sourceTree = "<group>"; };
+		15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = DirectionalLight.fsh; path = Source/RAEngine/Shaders/DirectionalLight.fsh; sourceTree = "<group>"; };
+		15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = DirectionalLight.vsh; path = Source/RAEngine/Shaders/DirectionalLight.vsh; sourceTree = "<group>"; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
 		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -244,6 +248,8 @@
 		15B8A419194CD1AB00CD578C /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
+				15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */,
+				15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */,
 				15B8A427194CD28900CD578C /* Shader.fsh */,
 				15B8A428194CD28900CD578C /* Shader.vsh */,
 			);
@@ -413,7 +419,9 @@
 				15B8A42A194CD28900CD578C /* Shader.vsh in Resources */,
 				15B8A429194CD28900CD578C /* Shader.fsh in Resources */,
 				150CB1D11948E6B900636103 /* InfoPlist.strings in Resources */,
+				15922FB2194D598E00EA2DC3 /* DirectionalLight.vsh in Resources */,
 				150CB1D91948E6B900636103 /* Images.xcassets in Resources */,
+				15922FB1194D598E00EA2DC3 /* DirectionalLight.fsh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

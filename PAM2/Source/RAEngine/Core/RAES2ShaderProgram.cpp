@@ -10,23 +10,23 @@
 #include <fstream>
 #include <iostream>
 #include "RAEnginePrerequisites.h"
+#include <OpenGLES/ES2/glext.h>
 
 // GL_CHECK_ERROR should be defined in some included header and handle OpenGL error checking
 #ifndef GL_CHECK_ERROR
 #define GL_CHECK_ERROR {}
 #endif
 
-namespace RAEngine {
-    
-    using namespace std;
-    
-    // Store compiled shader programs. Use vertex + fragment shader
+namespace RAEngine
+{   
+    using namespace std;    
+
     map<string, GLuint> RAES2ShaderProgram::shaderNameToProgramMap{};
-    // Count how many times program is requested. Delete the program only when count goes to zero.
     map<string, int> RAES2ShaderProgram::shaderNameToCountMap{};
     
     RAES2ShaderProgram::~RAES2ShaderProgram()
     {
+        //TODO test this
         map<string, int>::iterator it = shaderNameToCountMap.find(shaderNameKey);
         if (it != shaderNameToCountMap.end()) {
             int newCount = it->second - 1;
@@ -40,8 +40,7 @@ namespace RAEngine {
             }
         }
     }
-    
-    //Create a shader program from vertex and fragment shader files
+
     int RAES2ShaderProgram::loadProgram(const string& vertexShaderPath,
                                         const string& fragmentShaderPath)
     {
@@ -64,17 +63,17 @@ namespace RAEngine {
         return 1;
     }
     
-    GLuint RAES2ShaderProgram::getProgram() const noexcept
+    GLuint RAES2ShaderProgram::getProgram() 
     {
         return program;
     }
     
-    GLint RAES2ShaderProgram::getAttributeLocation(const GLchar* name) const noexcept
+    GLint RAES2ShaderProgram::getAttributeLocation(const GLchar* name) const
     {
         return glGetAttribLocation(program, name);
     }
     
-    GLint RAES2ShaderProgram::getUniformLocation(const GLchar* name) const noexcept
+    GLint RAES2ShaderProgram::getUniformLocation(const GLchar* name) const
     {
         return glGetUniformLocation(program, name);
     }
@@ -145,8 +144,7 @@ namespace RAEngine {
         return program;
     }
 
-
-    int RAES2ShaderProgram::compileShader(GLuint* shader, GLenum type, const string& filename) noexcept
+    int RAES2ShaderProgram::compileShader(GLuint* shader, GLenum type, const string& filename)
     {
         GLint status;
         
@@ -193,7 +191,7 @@ namespace RAEngine {
         return 1;
     }
 
-    int RAES2ShaderProgram::linkProgram(GLuint prog) noexcept
+    int RAES2ShaderProgram::linkProgram(GLuint prog)
     {
         GLint status;
         glLinkProgram(prog);
@@ -218,7 +216,7 @@ namespace RAEngine {
         return 1;
     }
 
-    int RAES2ShaderProgram::validateProgram(GLuint prog) noexcept
+    int RAES2ShaderProgram::validateProgram(GLuint prog) 
     {
         GLint logLength, status;
         

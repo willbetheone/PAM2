@@ -15,7 +15,11 @@ namespace RAEngine {
 
     
 #pragma mark - Public methods
-    RAMesh::RAMesh() {}
+    RAMesh::RAMesh()
+    {
+        viewMatrix = identity_Mat4x4f();
+        projectionMatrix = identity_Mat4x4f();
+    }
     
     RAMesh::~RAMesh()
     {

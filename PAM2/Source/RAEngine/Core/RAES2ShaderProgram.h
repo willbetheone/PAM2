@@ -18,25 +18,31 @@ namespace RAEngine
     class RAES2ShaderProgram
     {
     public:
+        //TODO comment every function
         
-        int loadProgram(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+        /*!
+         * @brief Create a shader program from vertex and fragment shader files
+         */
+        int loadProgram(const std::string& vertexShaderPath,
+                        const std::string& fragmentShaderPath);
+        GLuint getProgram() ;
+        GLint getAttributeLocation(const GLchar* name) const;
+        GLint getUniformLocation(const GLchar* name) const;
         
-        GLuint getProgram() const noexcept;
-        GLint getAttributeLocation(const GLchar* name) const noexcept;
-        GLint getUniformLocation(const GLchar* name) const noexcept;
-
-        static GLuint createProgram(const std::string& vertexShaderPath,
-                                    const std::string& fragmentShaderPath);
     private:
         GLuint program;
         std::string shaderNameKey;
         
+        // Store compiled shader programs. vertex+fragment shader name is key, program number is value.
         static std::map<std::string, GLuint> shaderNameToProgramMap;
+        // Count how many times program is requested. Delete the program only when count goes to zero.
         static std::map<std::string, int> shaderNameToCountMap;
         
-        static int compileShader(GLuint* shader, GLenum type, const std::string& filename) noexcept;
-        static int linkProgram(GLuint prog) noexcept;
-        static int validateProgram(GLuint prog) noexcept;
+        static GLuint createProgram(const std::string& vertexShaderPath,
+                                    const std::string& fragmentShaderPath);
+        static int compileShader(GLuint* shader, GLenum type, const std::string& filename);
+        static int linkProgram(GLuint prog);
+        static int validateProgram(GLuint prog);
         
         ~RAES2ShaderProgram();
     };

@@ -97,9 +97,12 @@ namespace TempToDelete {
    
     void TempMesh::draw()
     {
+        Mat3x3 nMat = getNormalMatrix();
+        Mat4x4 mvpMat = getModelViewProjectionMatrix();
+        
         glUseProgram(drawShaderProgram->getProgram());
-        glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, getModelViewProjectionMatrix().get());
-        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, getNormalMatrix().get());
+        glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, mvpMat.get());
+        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, nMat.get());
         vertexDataBuffer->bind();
         vertexDataBuffer->prepareToDraw(attrib[ATTRIB_POSITION], 3, 0, GL_FLOAT, GL_FALSE);
         vertexDataBuffer->prepareToDraw(attrib[ATTRIB_NORMAL], 3, VERTEX_SIZE, GL_FLOAT, GL_FALSE);
