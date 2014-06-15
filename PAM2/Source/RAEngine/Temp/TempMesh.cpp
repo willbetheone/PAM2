@@ -97,6 +97,7 @@ namespace TempToDelete {
    
     void TempMesh::draw()
     {
+        //added a new line
         Mat3x3 nMat = getNormalMatrix();
         Mat4x4 mvpMat = getModelViewProjectionMatrix();
         
