@@ -70,15 +70,15 @@ namespace TempToDelete {
     
     void TempMesh::setShaders(const string& vShader, const string& fShader)
     {
-        drawShaderProgram = new RAShaderProgram();
+        drawShaderProgram = new RAES2ShaderProgram();
         
         drawShaderProgram->loadProgram(vShader, fShader);
-        attrib[ATTRIB_POSITION] = drawShaderProgram->attributeLocation("position");
-        attrib[ATTRIB_NORMAL] = drawShaderProgram->attributeLocation("normal");
+        attrib[ATTRIB_POSITION] = drawShaderProgram->getAttributeLocation("position");
+        attrib[ATTRIB_NORMAL] = drawShaderProgram->getAttributeLocation("normal");
 //        attrib[ATTRIB_COLOR] = drawShaderProgram->attributeLocation("color");
   
-        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->uniformLocation("modelViewProjectionMatrix");
-        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->uniformLocation("normalMatrix");
+        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("modelViewProjectionMatrix");
+        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("normalMatrix");
     }
     
     void TempMesh::setVertexData()
@@ -97,7 +97,7 @@ namespace TempToDelete {
    
     void TempMesh::draw()
     {
-        glUseProgram(drawShaderProgram->program);
+        glUseProgram(drawShaderProgram->getProgram());
         glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, getModelViewProjectionMatrix().get());
         glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, getNormalMatrix().get());
         vertexDataBuffer->bind();

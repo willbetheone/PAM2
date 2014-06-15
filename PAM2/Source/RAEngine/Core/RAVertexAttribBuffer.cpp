@@ -7,10 +7,9 @@
 //
 
 #include "RAVertexAttribBuffer.h"
+#include "RAEnginePrerequisites.h"
 
 namespace RAEngine {
-    
-    void checkError();
     
     RAVertexAttribBuffer::RAVertexAttribBuffer(GLsizei aStride,
                                                GLsizei count,
@@ -25,14 +24,14 @@ namespace RAEngine {
         bufferSizeBytes = stride * count;
         target = aTarget;
         glGenBuffers(1, &name);
-        checkError();
+        GL_CHECK_ERROR;
         glBindBuffer(target, name);
-        checkError();
+        GL_CHECK_ERROR;
         glBufferData(target,  // Initialize buffer contents
                      bufferSizeBytes,  // Number of bytes to copy
                      dataPtr,          // Address of bytes to copy
                      usage);           // Hint: cache in GPU memory
-        checkError();
+        GL_CHECK_ERROR;
         assert(0 != name);
 
         
@@ -49,12 +48,12 @@ namespace RAEngine {
 
     void RAVertexAttribBuffer::enableAttribute(GLuint index) {
         glEnableVertexAttribArray(index);
-        checkError();
+        GL_CHECK_ERROR;
     }
     
     void RAVertexAttribBuffer::bind() {
         glBindBuffer(target, name);
-        checkError();
+        GL_CHECK_ERROR;
     }
     
     void RAVertexAttribBuffer::prepareToDraw(GLuint index,
@@ -74,7 +73,7 @@ namespace RAEngine {
                               stride,         // total num bytes stored per vertex
                               (char*)NULL + offset);      // offset from start of each vertex to
         
-        checkError();
+        GL_CHECK_ERROR;
     }
     
     void RAVertexAttribBuffer::drawPreparedArrays(GLenum mode,
@@ -82,6 +81,7 @@ namespace RAEngine {
                                                   GLsizei count)
     {
         glDrawArrays(mode, first, count);
+        GL_CHECK_ERROR;
     }
     
     void RAVertexAttribBuffer::drawPreparedArraysIndicies(GLenum mode,
@@ -89,6 +89,7 @@ namespace RAEngine {
                                                           GLsizei numIndcies)
     {
         glDrawElements(mode, numIndcies, dataType, 0);
+        GL_CHECK_ERROR;
     }
 
 
@@ -101,12 +102,6 @@ namespace RAEngine {
             name = 0;
         }
     }    
-    
-    void checkError() {
-        GLenum error = glGetError();
-        if (GL_NO_ERROR != error) {
-            printf("GL Error: 0x%x\n", error);
-        }
-    }
+
 }
 

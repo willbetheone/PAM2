@@ -25,7 +25,7 @@
 		150CB2221949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
 		150CB2231949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
-		15B8A422194CD1D900CD578C /* RAShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */; };
+		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */; };
 		15B8A426194CD1E600CD578C /* TempMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A424194CD1E600CD578C /* TempMesh.cpp */; };
 		15B8A429194CD28900CD578C /* Shader.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8A427194CD28900CD578C /* Shader.fsh */; };
@@ -101,13 +101,14 @@
 		150CB2141948F88900636103 /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
 		150CB2201949019000636103 /* PAMManifold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PAMManifold.cpp; path = Source/PAMManifold.cpp; sourceTree = "<group>"; };
 		150CB2211949019000636103 /* PAMManifold.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PAMManifold.h; path = Source/PAMManifold.h; sourceTree = "<group>"; };
+		15922FA7194D1FF400EA2DC3 /* RAEnginePrerequisites.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RAEnginePrerequisites.h; path = Source/RAEngine/Core/RAEnginePrerequisites.h; sourceTree = "<group>"; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
-		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; };
-		15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAShaderProgram.cpp; path = Source/RAEngine/Core/RAShaderProgram.cpp; sourceTree = "<group>"; };
-		15B8A41E194CD1D900CD578C /* RAShaderProgram.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAShaderProgram.h; path = Source/RAEngine/Core/RAShaderProgram.h; sourceTree = "<group>"; };
+		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		15B8A41E194CD1D900CD578C /* RAES2ShaderProgram.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAES2ShaderProgram.h; path = Source/RAEngine/Core/RAES2ShaderProgram.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAVertexAttribBuffer.cpp; path = Source/RAEngine/Core/RAVertexAttribBuffer.cpp; sourceTree = "<group>"; };
 		15B8A420194CD1D900CD578C /* RAVertexAttribBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAVertexAttribBuffer.h; path = Source/RAEngine/Core/RAVertexAttribBuffer.h; sourceTree = "<group>"; };
-		15B8A424194CD1E600CD578C /* TempMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = TempMesh.cpp; path = Source/RAEngine/Temp/TempMesh.cpp; sourceTree = "<group>"; };
+		15B8A424194CD1E600CD578C /* TempMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = TempMesh.cpp; path = Source/RAEngine/Temp/TempMesh.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		15B8A425194CD1E600CD578C /* TempMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = TempMesh.h; path = Source/RAEngine/Temp/TempMesh.h; sourceTree = "<group>"; };
 		15B8A427194CD28900CD578C /* Shader.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.fsh; path = Source/RAEngine/Shaders/Shader.fsh; sourceTree = "<group>"; };
 		15B8A428194CD28900CD578C /* Shader.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.vsh; path = Source/RAEngine/Shaders/Shader.vsh; sourceTree = "<group>"; };
@@ -254,10 +255,11 @@
 			children = (
 				15B8A41B194CD1D900CD578C /* RAMesh.cpp */,
 				15B8A41C194CD1D900CD578C /* RAMesh.h */,
-				15B8A41D194CD1D900CD578C /* RAShaderProgram.cpp */,
-				15B8A41E194CD1D900CD578C /* RAShaderProgram.h */,
+				15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */,
+				15B8A41E194CD1D900CD578C /* RAES2ShaderProgram.h */,
 				15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */,
 				15B8A420194CD1D900CD578C /* RAVertexAttribBuffer.h */,
+				15922FA7194D1FF400EA2DC3 /* RAEnginePrerequisites.h */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -434,7 +436,7 @@
 				15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */,
 				150CB1D71948E6B900636103 /* AppDelegate.mm in Sources */,
 				150CB1D31948E6B900636103 /* main.m in Sources */,
-				15B8A422194CD1D900CD578C /* RAShaderProgram.cpp in Sources */,
+				15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */,
 				15B8A426194CD1E600CD578C /* TempMesh.cpp in Sources */,
 				15B8A436194CD64200CD578C /* PAMViewController.mm in Sources */,
 				150CB2221949019000636103 /* PAMManifold.cpp in Sources */,

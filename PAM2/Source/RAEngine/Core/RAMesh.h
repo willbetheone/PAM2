@@ -14,7 +14,7 @@
 #include "Mat4x4f.h"
 #include "Mat3x3f.h"
 #include "RAVertexAttribBuffer.h"
-#include "RAShaderProgram.h"
+#include "RAES2ShaderProgram.h"
 
 namespace RAEngine {
 
@@ -82,8 +82,8 @@ namespace RAEngine {
         RAVertexAttribBuffer* vertexDataBuffer;
         
         //Shaders
-        RAShaderProgram* drawShaderProgram;
-        RAShaderProgram* depthShaderProgram;
+        RAES2ShaderProgram* drawShaderProgram;
+        RAES2ShaderProgram* depthShaderProgram;
         
     };    
 }
