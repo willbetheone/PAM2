@@ -17,8 +17,8 @@ namespace TempToDelete {
         0.5f, 0.5f, -0.5f,         1.0f, 0.0f, 0.0f,
         0.5f, -0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
         0.5f, -0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
-        0.5f, 0.5f, -0.5f,          1.0f, 0.0f, 0.0f,
-        0.5f, 0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
+        0.5f, 0.5f, -0.5f,         1.0f, 0.0f, 0.0f,
+        0.5f, 0.5f, 0.5f,          1.0f, 0.0f, 0.0f,
         
         0.5f, 0.5f, -0.5f,         0.0f, 1.0f, 0.0f,
         -0.5f, 0.5f, -0.5f,        0.0f, 1.0f, 0.0f,
@@ -77,8 +77,9 @@ namespace TempToDelete {
         attrib[ATTRIB_NORMAL] = drawShaderProgram->getAttributeLocation("normal");
 //        attrib[ATTRIB_COLOR] = drawShaderProgram->attributeLocation("color");
   
-        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("modelViewProjectionMatrix");
-        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("normalMatrix");
+        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("matrix");
+        uniforms[UNIFORM_LIGHT_DIRECTION] = drawShaderProgram->getUniformLocation("lightDirection");
+        uniforms[UNIFORM_LIGHT_COLOR] = drawShaderProgram->getUniformLocation("lightDiffuseColor");
     }
     
     void TempMesh::setVertexData()
@@ -90,20 +91,20 @@ namespace TempToDelete {
                                                     GL_STATIC_DRAW,
                                                     GL_ARRAY_BUFFER);
         vertexDataBuffer->enableAttribute(ATTRIB_POSITION);
-        vertexDataBuffer->enableAttribute(ATTRIB_NORMAL);
-        
+        vertexDataBuffer->enableAttribute(ATTRIB_NORMAL);        
     }
     
-   
     void TempMesh::draw()
     {
         //added a new line
-        Mat3x3 nMat = getNormalMatrix();
+//        Mat3x3 nMat = getNormalMatrix();
         Mat4x4 mvpMat = getModelViewProjectionMatrix();
         
         glUseProgram(drawShaderProgram->getProgram());
         glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, mvpMat.get());
-        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, nMat.get());
+        glUniform4f(uniforms[UNIFORM_LIGHT_DIRECTION], 1.0, 0.75, 0.25, 1.0);
+        glUniform4f(uniforms[UNIFORM_LIGHT_COLOR], 0.8, 0.8, 1.0, 1.0);
+
         vertexDataBuffer->bind();
         vertexDataBuffer->prepareToDraw(attrib[ATTRIB_POSITION], 3, 0, GL_FLOAT, GL_FALSE);
         vertexDataBuffer->prepareToDraw(attrib[ATTRIB_NORMAL], 3, VERTEX_SIZE, GL_FLOAT, GL_FALSE);

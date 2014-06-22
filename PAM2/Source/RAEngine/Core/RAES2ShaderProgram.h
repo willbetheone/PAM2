@@ -17,21 +17,42 @@ namespace RAEngine
 {
     class RAES2ShaderProgram
     {
-    public:
-        //TODO comment every function
+    public:        
         
-        /*!
-         * @brief Create a shader program from vertex and fragment shader files
+        ~RAES2ShaderProgram();
+        
+        /**
+         Creates shader program. Compiles vertex/fragment shaders and attaches them
+         to the shader program.
+         @param vertexShaderPath Absolute path to a vertex shader source
+         @param fragmentShaderPath Absolute path to a fragment shader source
+         @return 0 is returned upon failure
          */
-        int loadProgram(const std::string& vertexShaderPath,
-                        const std::string& fragmentShaderPath);
-        GLuint getProgram() ;
+        int loadProgram(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+        
+        /**
+         Get compiled shader program
+         @return shader program
+         */
+        GLuint getProgram() const;
+        
+        /**
+         Get the location of an attribute variable
+         @param name name of the attribute variable whose location is to be queried.
+         @return location of an attribute variable
+         */
         GLint getAttributeLocation(const GLchar* name) const;
+        
+        /**
+         Get the location of an uniform variable
+         @param name name of the uniform variable whose location is to be queried.
+         @return location of an uniform variable
+         */
         GLint getUniformLocation(const GLchar* name) const;
         
     private:
-        GLuint program;
-        std::string shaderNameKey;
+        GLuint program; // shader program
+        std::string shaderNameKey; // vertex+fragment shader name
         
         // Store compiled shader programs. vertex+fragment shader name is key, program number is value.
         static std::map<std::string, GLuint> shaderNameToProgramMap;
@@ -43,8 +64,6 @@ namespace RAEngine
         static int compileShader(GLuint* shader, GLenum type, const std::string& filename);
         static int linkProgram(GLuint prog);
         static int validateProgram(GLuint prog);
-        
-        ~RAES2ShaderProgram();
     };
 }
 

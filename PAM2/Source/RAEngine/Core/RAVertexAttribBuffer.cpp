@@ -7,7 +7,8 @@
 //
 
 #include "RAVertexAttribBuffer.h"
-#include "RAEnginePrerequisites.h"
+#include "RALogManager.h"
+#include <OpenGLES/ES2/glext.h>
 
 namespace RAEngine {
     

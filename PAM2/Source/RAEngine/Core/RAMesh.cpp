@@ -46,7 +46,8 @@ namespace RAEngine {
     
     Mat3x3 RAMesh::getNormalMatrix()
     {
-        return transpose(invert(get_Mat3x3f(getModelMatrix())));
+//        return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
+        return get_Mat3x3f(getModelViewMatrix());
     }
     
 }

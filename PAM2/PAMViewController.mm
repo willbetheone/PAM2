@@ -11,10 +11,14 @@
 #include "PAMManifold.h"
 #include "../HMesh/obj_load.h"
 #include "TempMesh.h"
+#include "RARotationManager.h"
+#include "RAZoomManager.h"
+#include "RATranslationManager.h"
 
 using namespace CGLA;
 using namespace PAMMesh;
 using namespace TempToDelete;
+using namespace RAEngine;
 
 @interface PAMViewController () {
     //Off Screen framebuffers and renderbuffers
@@ -25,8 +29,12 @@ using namespace TempToDelete;
     Mat4x4f viewMatrix;
     Mat4x4f projectionMatrix;
     
-//    PAMManifold* pamManifold;
+    PAMManifold* pamManifold;
     TempMesh* tempMesh;
+    
+    RARotationManager* rotManager;
+    RAZoomManager* zoomManager;
+    RATranslationManager* translationManager;    
 }
 
 @end
@@ -38,22 +46,30 @@ using namespace TempToDelete;
     self = [super init];
     if (self) {
         // Custom initialization
+        rotManager = new RARotationManager();
+        zoomManager = new RAZoomManager();
+        translationManager = new RATranslationManager();
     }
     return self;
 }
+
 #pragma mark - View cycle and OpenGL setup
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     [self setupGL];
+    [self loadMeshData];
+    [self addGestureRecognizersToView:self.view];
+    
 
-    tempMesh = new TempMesh();
-    NSString* vShader = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
-    NSString* fShader = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
-    std::string vShader_Cplus([vShader UTF8String]);
-    std::string fShader_Cplus([fShader UTF8String]);
-    tempMesh->setShaders(vShader_Cplus, fShader_Cplus);
-    tempMesh->setVertexData();
+    
+//    tempMesh = new TempMesh();
+//    NSString* vShader = [[NSBundle mainBundle] pathForResource:@"DirectionalLight" ofType:@"vsh"];
+//    NSString* fShader = [[NSBundle mainBundle] pathForResource:@"DirectionalLight" ofType:@"fsh"];
+//    std::string vShader_Cplus([vShader UTF8String]);
+//    std::string fShader_Cplus([fShader UTF8String]);
+//    tempMesh->setShaders(vShader_Cplus, fShader_Cplus);
+//    tempMesh->setVertexData();
 }
 
 - (void)viewDidUnload
@@ -109,45 +125,88 @@ using namespace TempToDelete;
 }
 
 
+-(void)addGestureRecognizersToView:(UIView*)view
+{
+    //Rotation
+    UIPanGestureRecognizer* oneFingerPanning = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleOneFingerPanGesture:)];
+    oneFingerPanning.maximumNumberOfTouches = 1;
+    [view addGestureRecognizer:oneFingerPanning];
+    
+    //Zoom
+    UIPinchGestureRecognizer* pinchToZoom = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
+    [view addGestureRecognizer:pinchToZoom];
+    
+    //Translation
+    UIPanGestureRecognizer* twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
+    twoFingerTranslation.minimumNumberOfTouches = 2;
+    twoFingerTranslation.maximumNumberOfTouches = 2;
+    [view addGestureRecognizer:twoFingerTranslation];
+}
+
+-(void)handleOneFingerPanGesture:(UIGestureRecognizer*)sender
+{
+    rotManager->handlePanGesture(sender);
+}
+
+-(void)handlePinchGesture:(UIGestureRecognizer*)sender
+{
+    zoomManager->handlePinchGesture(sender);
+}
+
+-(void)handleTwoFingerPanGesture:(UIGestureRecognizer*)sender
+{
+    translationManager->handlePanGesture(sender);
+}
+
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
     // Dispose of any resources that can be recreated.
 }
 
-////Load initial mesh from OBJ file
-//-(void)loadMeshData {
-//    
-//    [self setPaused:YES]; //pause rendering
-//    if (pamManifold != nullptr) {
-//        delete pamManifold;
-//    }
-//    pamManifold = new PAMManifold();
-//    
-//    //Load obj file
-//    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"HAND PAM 15" ofType:@"obj"];
-//    HMesh::obj_load(objPath.UTF8String, *pamManifold);
-//    
-//    [self setPaused:NO];
-//}
-
+//Load initial mesh from OBJ file
+-(void)loadMeshData {
+    
+    [self setPaused:YES]; //pause rendering
+    if (pamManifold != nullptr) {
+        delete pamManifold;
+    }
+    pamManifold = new PAMManifold();
+    
+    //Load obj file
+    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"HAND PAM 15" ofType:@"obj"];
+    HMesh::obj_load(objPath.UTF8String, *pamManifold);
+    pamManifold->normalizeVertexCoordinates()
+    
+    ;
+    pamManifold->setupShaders();
+    pamManifold->bufferVertexDataToGPU();
+    
+    [self setPaused:NO];
+}
 
 #pragma mark - OpenGL Drawing
 
 -(void)update
 {
-    projectionMatrix = ortho_Mat4x4f(-1, 1, -1*_aspectRatio, 1*_aspectRatio, -4, 4);
+    GLfloat aspectRatio = (GLfloat)_glHeight / (GLfloat)_glWidth;
+    float scale = 1.0f/zoomManager->getScaleFactor();
+    projectionMatrix = ortho_Mat4x4f(-1*scale, 1*scale, -1*aspectRatio*scale, 1*aspectRatio*scale, -1, 1);
+//    projectionMatrix = perspective_Mat4x4f(65*scale, aspectRatio, 1, 100);
+//    projectionMatrix = frustum_Mat4x4f(-2*scale, 2*scale, -2*aspectRatio*scale, 2*aspectRatio*scale, 0.1, 10);
+    
     viewMatrix = identity_Mat4x4f();
+    viewMatrix *= translationManager->getTranslationMatrix();
+    viewMatrix *= rotManager->getRotationMatrix();
 }
 
 -(void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     
-    tempMesh->projectionMatrix = projectionMatrix;
-    tempMesh->viewMatrix = viewMatrix;
-    tempMesh->draw();
+    pamManifold->projectionMatrix = projectionMatrix;
+    pamManifold->viewMatrix = viewMatrix;
+    pamManifold->draw();
 }
-
 
 @end

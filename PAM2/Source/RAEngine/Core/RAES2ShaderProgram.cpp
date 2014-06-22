@@ -9,13 +9,8 @@
 #include "RAES2ShaderProgram.h"
 #include <fstream>
 #include <iostream>
-#include "RAEnginePrerequisites.h"
 #include <OpenGLES/ES2/glext.h>
-
-// GL_CHECK_ERROR should be defined in some included header and handle OpenGL error checking
-#ifndef GL_CHECK_ERROR
-#define GL_CHECK_ERROR {}
-#endif
+#include "RALogManager.h"
 
 namespace RAEngine
 {   
@@ -23,10 +18,10 @@ namespace RAEngine
 
     map<string, GLuint> RAES2ShaderProgram::shaderNameToProgramMap{};
     map<string, int> RAES2ShaderProgram::shaderNameToCountMap{};
-    
+
+#pragma mark - CONSTRUCTOR/DESTRUCTOR
     RAES2ShaderProgram::~RAES2ShaderProgram()
     {
-        //TODO test this
         map<string, int>::iterator it = shaderNameToCountMap.find(shaderNameKey);
         if (it != shaderNameToCountMap.end()) {
             int newCount = it->second - 1;
@@ -41,6 +36,8 @@ namespace RAEngine
         }
     }
 
+#pragma mark - PUBLIC METHODS
+    
     int RAES2ShaderProgram::loadProgram(const string& vertexShaderPath,
                                         const string& fragmentShaderPath)
     {
@@ -63,7 +60,7 @@ namespace RAEngine
         return 1;
     }
     
-    GLuint RAES2ShaderProgram::getProgram() 
+    GLuint RAES2ShaderProgram::getProgram() const
     {
         return program;
     }
@@ -78,7 +75,7 @@ namespace RAEngine
         return glGetUniformLocation(program, name);
     }
 
-#pragma mark - SHADER COMPILATION
+#pragma mark - PRIVATE METHODS
     
     GLuint RAES2ShaderProgram::createProgram(const std::string& vertexShaderPath,
                                              const std::string& fragmentShaderPath)
@@ -93,12 +90,12 @@ namespace RAEngine
         
         // Create and compile vertex/fragment shaders
         if (!compileShader(&vertShader, GL_VERTEX_SHADER, vertexShaderPath)) {
-            cerr << "Failed to compile vertex shader";
+            RA_LOG_ERROR("Failed to compile vertex shader");
             return 0;
         }
         
         if (!compileShader(&fragShader, GL_FRAGMENT_SHADER, fragmentShaderPath)) {
-            cerr << "Failed to compile fragmet shader";
+            RA_LOG_ERROR("Failed to compile fragmet shader");
             return 0;
         }
         
@@ -110,7 +107,7 @@ namespace RAEngine
         
         // Link program
         if (!linkProgram(program)) {
-            cerr << "Failed to link program" << program;
+            RA_LOG_ERROR("Failed to link program %i", program);
             if (vertShader) {
                 glDeleteShader(vertShader);
                 vertShader = 0;
@@ -146,19 +143,17 @@ namespace RAEngine
 
     int RAES2ShaderProgram::compileShader(GLuint* shader, GLenum type, const string& filename)
     {
-        GLint status;
-        
         std::ifstream ifs(filename);
         if (!ifs.is_open()) {
-            cerr << "Couldnt open shader file " << filename;
+            RA_LOG_ERROR("Couldnt open shader file %s", filename.c_str());
             return 0;
         }
         std::string content((std::istreambuf_iterator<GLchar>(ifs)),
                             (std::istreambuf_iterator<GLchar>()));
+
         const GLchar* source = content.c_str();
-        
         if (source == nullptr) {
-            cerr << "Couldnt load shader text " << filename;
+            RA_LOG_ERROR("Couldnt load shader text %s", filename.c_str());
             return 0;
         }
         
@@ -175,16 +170,16 @@ namespace RAEngine
         if (logLength > 0) {
             GLchar *log = (GLchar *)malloc(logLength);
             glGetShaderInfoLog(*shader, logLength, &logLength, log);
-            cerr << "Shader compile log:\n " << log;
+            RA_LOG_WARN("Shader compile log: %s", log);
             free(log);
         }
 
-        
+        GLint status;
         glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
         GL_CHECK_ERROR;
         if (status == 0) {
             glDeleteShader(*shader);
-            cerr << "Couldnt compile shader. Deleting it...\n ";
+            RA_LOG_ERROR("Couldnt compile shader. Deleting it...");
             return 0;
         }
         
@@ -203,13 +198,13 @@ namespace RAEngine
         if (logLength > 0) {
             GLchar *log = (GLchar *)malloc(logLength);
             glGetProgramInfoLog(prog, logLength, &logLength, log);
-            cerr << "Program link log:\n" << log;
+            RA_LOG_WARN("Program link log: %s", log);
             free(log);
         }
         
         glGetProgramiv(prog, GL_LINK_STATUS, &status);
         if (status == 0) {
-            cerr << "Couldn't link:\n";
+            RA_LOG_ERROR("Couldnt link");
             return 0;
         }
         
@@ -226,13 +221,13 @@ namespace RAEngine
         if (logLength > 0) {
             GLchar *log = (GLchar *)malloc(logLength);
             glGetProgramInfoLog(prog, logLength, &logLength, log);
-            cerr << "Program validate log:\n" << log;
+            RA_LOG_ERROR("Program validate log: %s", log);
             free(log);
         }
         
         glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
         if (status == 0) {
-            cerr << "Couldn't validate:\n";
+            RA_LOG_ERROR("Couldn't validate");
             return 0;
         }
         

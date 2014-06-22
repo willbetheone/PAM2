@@ -22,10 +22,18 @@
 		150CB20F1948F02100636103 /* libGEL-iOS Static Library.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2081948EFD900636103 /* libGEL-iOS Static Library.a */; };
 		150CB2131948F86B00636103 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2121948F86B00636103 /* OpenGLES.framework */; };
 		150CB2151948F88900636103 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2141948F88900636103 /* GLKit.framework */; };
-		150CB2221949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
-		150CB2231949019000636103 /* PAMManifold.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.cpp */; };
-		15922FB1194D598E00EA2DC3 /* DirectionalLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */; };
-		15922FB2194D598E00EA2DC3 /* DirectionalLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */; };
+		150CB2221949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
+		150CB2231949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
+		1559EBCE1952AB4E00B235F2 /* RAZoomManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */; };
+		1559EBCF1952AB4E00B235F2 /* RAZoomManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */; };
+		1559EBD51952B02700B235F2 /* RATranslationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBD31952B02700B235F2 /* RATranslationManager.mm */; };
+		1559EBD61952B02700B235F2 /* RATranslationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBD31952B02700B235F2 /* RATranslationManager.mm */; };
+		15736AF719512A3F00055052 /* RALogManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15736AF519512A3F00055052 /* RALogManager.cpp */; };
+		15736AF819512A3F00055052 /* RALogManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15736AF519512A3F00055052 /* RALogManager.cpp */; };
+		15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
+		15736AFE195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
+		15B0017619523A26002A238D /* RARotationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B0017419523A26002A238D /* RARotationManager.mm */; };
+		15B0017719523A26002A238D /* RARotationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B0017419523A26002A238D /* RARotationManager.mm */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
 		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */; };
@@ -101,11 +109,33 @@
 		150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = "GEL-iOS.xcodeproj"; path = "GEL-iOS/GEL-iOS/GEL-iOS.xcodeproj"; sourceTree = "<group>"; };
 		150CB2121948F86B00636103 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		150CB2141948F88900636103 /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
-		150CB2201949019000636103 /* PAMManifold.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PAMManifold.cpp; path = Source/PAMManifold.cpp; sourceTree = "<group>"; };
+		150CB2201949019000636103 /* PAMManifold.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = PAMManifold.mm; path = Source/PAMManifold.mm; sourceTree = "<group>"; };
 		150CB2211949019000636103 /* PAMManifold.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PAMManifold.h; path = Source/PAMManifold.h; sourceTree = "<group>"; };
-		15922FA7194D1FF400EA2DC3 /* RAEnginePrerequisites.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = RAEnginePrerequisites.h; path = Source/RAEngine/Core/RAEnginePrerequisites.h; sourceTree = "<group>"; };
-		15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = DirectionalLight.fsh; path = Source/RAEngine/Shaders/DirectionalLight.fsh; sourceTree = "<group>"; };
-		15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = DirectionalLight.vsh; path = Source/RAEngine/Shaders/DirectionalLight.vsh; sourceTree = "<group>"; };
+		1519261F1953D8930006BC76 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		151926221953D8930006BC76 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		151926231953D8930006BC76 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		151926241953D8930006BC76 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		151926271953D8930006BC76 /* MAC Target-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MAC Target-Info.plist"; sourceTree = "<group>"; };
+		151926291953D8930006BC76 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		1519262B1953D8930006BC76 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		1519262D1953D8930006BC76 /* MAC Target-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MAC Target-Prefix.pch"; sourceTree = "<group>"; };
+		1519262F1953D8930006BC76 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
+		151926311953D8930006BC76 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		151926321953D8930006BC76 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		151926351953D8930006BC76 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
+		151926371953D8930006BC76 /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Images.xcassets; sourceTree = "<group>"; };
+		151926441953D8930006BC76 /* MAC TargetTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MAC TargetTests-Info.plist"; sourceTree = "<group>"; };
+		151926461953D8930006BC76 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		151926481953D8930006BC76 /* MAC_TargetTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = MAC_TargetTests.m; sourceTree = "<group>"; };
+		1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RAZoomManager.mm; path = Source/RAEngine/TransformationManager/RAZoomManager.mm; sourceTree = "<group>"; };
+		1559EBCD1952AB4E00B235F2 /* RAZoomManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAZoomManager.h; path = Source/RAEngine/TransformationManager/RAZoomManager.h; sourceTree = "<group>"; };
+		1559EBD31952B02700B235F2 /* RATranslationManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RATranslationManager.mm; path = Source/RAEngine/TransformationManager/RATranslationManager.mm; sourceTree = "<group>"; };
+		1559EBD41952B02700B235F2 /* RATranslationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RATranslationManager.h; path = Source/RAEngine/TransformationManager/RATranslationManager.h; sourceTree = "<group>"; };
+		15736AF519512A3F00055052 /* RALogManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RALogManager.cpp; path = Source/RALogging/RALogManager.cpp; sourceTree = "<group>"; };
+		15736AF619512A3F00055052 /* RALogManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RALogManager.h; path = Source/RALogging/RALogManager.h; sourceTree = "<group>"; };
+		15736AFC195156AC00055052 /* HAND PAM 15.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "HAND PAM 15.obj"; path = "Temp Files/HAND PAM 15.obj"; sourceTree = "<group>"; };
+		15B0017419523A26002A238D /* RARotationManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RARotationManager.mm; path = Source/RAEngine/TransformationManager/RARotationManager.mm; sourceTree = "<group>"; };
+		15B0017519523A26002A238D /* RARotationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RARotationManager.h; path = Source/RAEngine/TransformationManager/RARotationManager.h; sourceTree = "<group>"; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
 		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -155,6 +185,8 @@
 				150CB1FE1948EFD900636103 /* GEL-iOS.xcodeproj */,
 				150CB1CC1948E6B900636103 /* PAM2 */,
 				150CB1E51948E6B900636103 /* PAM2Tests */,
+				151926251953D8930006BC76 /* MAC Target */,
+				151926421953D8930006BC76 /* MAC TargetTests */,
 				150CB1C51948E6B800636103 /* Frameworks */,
 				150CB1C41948E6B800636103 /* Products */,
 			);
@@ -178,6 +210,8 @@
 				150CB1C81948E6B800636103 /* CoreGraphics.framework */,
 				150CB1CA1948E6B900636103 /* UIKit.framework */,
 				150CB1DF1948E6B900636103 /* XCTest.framework */,
+				1519261F1953D8930006BC76 /* Cocoa.framework */,
+				151926211953D8930006BC76 /* Other Frameworks */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -185,9 +219,11 @@
 		150CB1CC1948E6B900636103 /* PAM2 */ = {
 			isa = PBXGroup;
 			children = (
+				15736AFB1951563C00055052 /* TempFiles */,
 				150CB1D51948E6B900636103 /* AppDelegate.h */,
 				150CB1D61948E6B900636103 /* AppDelegate.mm */,
 				15B93157194A821E0020FA2D /* ViewControllers */,
+				15736AF1195127FC00055052 /* RALogging */,
 				15C649601949393D00640630 /* RAEngine */,
 				150CB21F1949013C00636103 /* Source */,
 				150CB1D81948E6B900636103 /* Images.xcassets */,
@@ -240,16 +276,96 @@
 			isa = PBXGroup;
 			children = (
 				150CB2211949019000636103 /* PAMManifold.h */,
-				150CB2201949019000636103 /* PAMManifold.cpp */,
+				150CB2201949019000636103 /* PAMManifold.mm */,
 			);
 			name = Source;
+			sourceTree = "<group>";
+		};
+		151926211953D8930006BC76 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				151926221953D8930006BC76 /* AppKit.framework */,
+				151926231953D8930006BC76 /* CoreData.framework */,
+				151926241953D8930006BC76 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+		151926251953D8930006BC76 /* MAC Target */ = {
+			isa = PBXGroup;
+			children = (
+				151926311953D8930006BC76 /* AppDelegate.h */,
+				151926321953D8930006BC76 /* AppDelegate.m */,
+				151926341953D8930006BC76 /* MainMenu.xib */,
+				151926371953D8930006BC76 /* Images.xcassets */,
+				151926261953D8930006BC76 /* Supporting Files */,
+			);
+			path = "MAC Target";
+			sourceTree = "<group>";
+		};
+		151926261953D8930006BC76 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				151926271953D8930006BC76 /* MAC Target-Info.plist */,
+				151926281953D8930006BC76 /* InfoPlist.strings */,
+				1519262B1953D8930006BC76 /* main.m */,
+				1519262D1953D8930006BC76 /* MAC Target-Prefix.pch */,
+				1519262E1953D8930006BC76 /* Credits.rtf */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		151926421953D8930006BC76 /* MAC TargetTests */ = {
+			isa = PBXGroup;
+			children = (
+				151926481953D8930006BC76 /* MAC_TargetTests.m */,
+				151926431953D8930006BC76 /* Supporting Files */,
+			);
+			path = "MAC TargetTests";
+			sourceTree = "<group>";
+		};
+		151926431953D8930006BC76 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				151926441953D8930006BC76 /* MAC TargetTests-Info.plist */,
+				151926451953D8930006BC76 /* InfoPlist.strings */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		15736AF1195127FC00055052 /* RALogging */ = {
+			isa = PBXGroup;
+			children = (
+				15736AF519512A3F00055052 /* RALogManager.cpp */,
+				15736AF619512A3F00055052 /* RALogManager.h */,
+			);
+			name = RALogging;
+			sourceTree = "<group>";
+		};
+		15736AFB1951563C00055052 /* TempFiles */ = {
+			isa = PBXGroup;
+			children = (
+				15736AFC195156AC00055052 /* HAND PAM 15.obj */,
+			);
+			name = TempFiles;
+			sourceTree = "<group>";
+		};
+		15B0016819523994002A238D /* Transformation Managers */ = {
+			isa = PBXGroup;
+			children = (
+				15B0017419523A26002A238D /* RARotationManager.mm */,
+				15B0017519523A26002A238D /* RARotationManager.h */,
+				1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */,
+				1559EBCD1952AB4E00B235F2 /* RAZoomManager.h */,
+				1559EBD31952B02700B235F2 /* RATranslationManager.mm */,
+				1559EBD41952B02700B235F2 /* RATranslationManager.h */,
+			);
+			name = "Transformation Managers";
 			sourceTree = "<group>";
 		};
 		15B8A419194CD1AB00CD578C /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
-				15922FAF194D598E00EA2DC3 /* DirectionalLight.fsh */,
-				15922FB0194D598E00EA2DC3 /* DirectionalLight.vsh */,
 				15B8A427194CD28900CD578C /* Shader.fsh */,
 				15B8A428194CD28900CD578C /* Shader.vsh */,
 			);
@@ -265,7 +381,6 @@
 				15B8A41E194CD1D900CD578C /* RAES2ShaderProgram.h */,
 				15B8A41F194CD1D900CD578C /* RAVertexAttribBuffer.cpp */,
 				15B8A420194CD1D900CD578C /* RAVertexAttribBuffer.h */,
-				15922FA7194D1FF400EA2DC3 /* RAEnginePrerequisites.h */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -293,6 +408,7 @@
 		15C649601949393D00640630 /* RAEngine */ = {
 			isa = PBXGroup;
 			children = (
+				15B0016819523994002A238D /* Transformation Managers */,
 				15B8A419194CD1AB00CD578C /* Shaders */,
 				15B93153194A81E30020FA2D /* Temp */,
 				15B8A41A194CD1B500CD578C /* Core */,
@@ -362,6 +478,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				Base,
 			);
 			mainGroup = 150CB1BA1948E6B800636103;
 			productRefGroup = 150CB1C41948E6B800636103 /* Products */;
@@ -419,9 +536,8 @@
 				15B8A42A194CD28900CD578C /* Shader.vsh in Resources */,
 				15B8A429194CD28900CD578C /* Shader.fsh in Resources */,
 				150CB1D11948E6B900636103 /* InfoPlist.strings in Resources */,
-				15922FB2194D598E00EA2DC3 /* DirectionalLight.vsh in Resources */,
+				15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */,
 				150CB1D91948E6B900636103 /* Images.xcassets in Resources */,
-				15922FB1194D598E00EA2DC3 /* DirectionalLight.fsh in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -430,6 +546,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				150CB1EA1948E6B900636103 /* InfoPlist.strings in Resources */,
+				15736AFE195156AC00055052 /* HAND PAM 15.obj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -443,12 +560,16 @@
 				15B8A435194CD64200CD578C /* BasePAMViewController.mm in Sources */,
 				15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */,
 				150CB1D71948E6B900636103 /* AppDelegate.mm in Sources */,
+				1559EBD51952B02700B235F2 /* RATranslationManager.mm in Sources */,
 				150CB1D31948E6B900636103 /* main.m in Sources */,
 				15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */,
+				1559EBCE1952AB4E00B235F2 /* RAZoomManager.mm in Sources */,
 				15B8A426194CD1E600CD578C /* TempMesh.cpp in Sources */,
 				15B8A436194CD64200CD578C /* PAMViewController.mm in Sources */,
-				150CB2221949019000636103 /* PAMManifold.cpp in Sources */,
+				15B0017619523A26002A238D /* RARotationManager.mm in Sources */,
+				150CB2221949019000636103 /* PAMManifold.mm in Sources */,
 				15B8A423194CD1D900CD578C /* RAVertexAttribBuffer.cpp in Sources */,
+				15736AF719512A3F00055052 /* RALogManager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -456,8 +577,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				150CB2231949019000636103 /* PAMManifold.cpp in Sources */,
+				150CB2231949019000636103 /* PAMManifold.mm in Sources */,
 				150CB1EC1948E6B900636103 /* PAM2Tests.m in Sources */,
+				1559EBD61952B02700B235F2 /* RATranslationManager.mm in Sources */,
+				15736AF819512A3F00055052 /* RALogManager.cpp in Sources */,
+				15B0017719523A26002A238D /* RARotationManager.mm in Sources */,
+				1559EBCF1952AB4E00B235F2 /* RAZoomManager.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -489,6 +614,38 @@
 			isa = PBXVariantGroup;
 			children = (
 				150CB1E91948E6B900636103 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		151926281953D8930006BC76 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				151926291953D8930006BC76 /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		1519262E1953D8930006BC76 /* Credits.rtf */ = {
+			isa = PBXVariantGroup;
+			children = (
+				1519262F1953D8930006BC76 /* en */,
+			);
+			name = Credits.rtf;
+			sourceTree = "<group>";
+		};
+		151926341953D8930006BC76 /* MainMenu.xib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				151926351953D8930006BC76 /* Base */,
+			);
+			name = MainMenu.xib;
+			sourceTree = "<group>";
+		};
+		151926451953D8930006BC76 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				151926461953D8930006BC76 /* en */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";
@@ -575,6 +732,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "PAM2/PAM2-Prefix.pch";
@@ -591,6 +749,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution: Rinat Abdrashitov (S9DA2LPXVJ)";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;

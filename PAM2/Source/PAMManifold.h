@@ -20,14 +20,21 @@ namespace PAMMesh {
     {
         public:
         // Default constructor
-        PAMManifold() : HMesh::Manifold() {};
+        PAMManifold();
 
-        void normalizeVertexCoordinates() noexcept;
+        void setupShaders();
+        void bufferVertexDataToGPU();
+        
+        void normalizeVertexCoordinates();
         
         void getVertexData(CGLA::Vec3f*& vertexPositions,
                            CGLA::Vec3f*& vertexNormals,
                            CGLA::Vec4uc*& vertexColors,
-                           std::vector<size_t>*& indicies) const noexcept;
+                           std::vector<unsigned int>*& indicies) const;
+        
+        void draw();
+        
+    
     };
 }
 
