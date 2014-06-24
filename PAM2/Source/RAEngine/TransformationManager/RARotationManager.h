@@ -11,7 +11,6 @@
 
 #include <iostream>
 #include "Mat4x4f.h"
-#import <GLKit/GLKMath.h>
 
 namespace RAEngine
 {
@@ -21,8 +20,10 @@ namespace RAEngine
         RARotationManager();
         CGLA::Mat4x4f getRotationMatrix() const;
         void handlePanGesture(UIGestureRecognizer* sender);
+        void handleRotationGesture(UIGestureRecognizer* sender);
     private:
         CGPoint lastLoc;
+        float lastRot;
         CGLA::Mat4x4f manualRotationMatrix;
     };
 }

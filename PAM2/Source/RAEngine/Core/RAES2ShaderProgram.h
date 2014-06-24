@@ -11,7 +11,7 @@
 
 #include <iostream>
 #include <map>
-#include <OpenGLES/ES2/gl.h>
+#import <OpenGLES/ES2/gl.h>
 
 namespace RAEngine
 {
@@ -28,7 +28,8 @@ namespace RAEngine
          @param fragmentShaderPath Absolute path to a fragment shader source
          @return 0 is returned upon failure
          */
-        int loadProgram(const std::string& vertexShaderPath, const std::string& fragmentShaderPath);
+        int loadProgram(const std::string& vertexShaderPath, 
+                        const std::string& fragmentShaderPath);
         
         /**
          Get compiled shader program
@@ -39,14 +40,14 @@ namespace RAEngine
         /**
          Get the location of an attribute variable
          @param name name of the attribute variable whose location is to be queried.
-         @return location of an attribute variable
+         @return location of attribute variable
          */
         GLint getAttributeLocation(const GLchar* name) const;
         
         /**
          Get the location of an uniform variable
          @param name name of the uniform variable whose location is to be queried.
-         @return location of an uniform variable
+         @return location of uniform variable
          */
         GLint getUniformLocation(const GLchar* name) const;
         
@@ -61,6 +62,7 @@ namespace RAEngine
         
         static GLuint createProgram(const std::string& vertexShaderPath,
                                     const std::string& fragmentShaderPath);
+        
         static int compileShader(GLuint* shader, GLenum type, const std::string& filename);
         static int linkProgram(GLuint prog);
         static int validateProgram(GLuint prog);

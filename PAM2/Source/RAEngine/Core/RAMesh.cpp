@@ -8,11 +8,9 @@
 
 #include "RAMesh.h"
 
-
 namespace RAEngine {
 
     using namespace CGLA;
-
     
 #pragma mark - Public methods
     RAMesh::RAMesh()
@@ -23,10 +21,21 @@ namespace RAEngine {
     
     RAMesh::~RAMesh()
     {
+        //Indexed vertex data
         delete positionDataBuffer;
         delete normalDataBuffer;
         delete colorDataBuffer;
         delete indexDataBuffer;
+
+        //Interlieved vertex data
+        delete vertexDataBuffer;
+        
+        //Vertex array
+        delete vertexArray;
+
+        //Shaders
+        delete drawShaderProgram;
+        delete depthShaderProgram;
     }
     
     Mat4x4 RAMesh::getModelViewProjectionMatrix()
@@ -46,8 +55,7 @@ namespace RAEngine {
     
     Mat3x3 RAMesh::getNormalMatrix()
     {
-//        return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
-        return get_Mat3x3f(getModelViewMatrix());
+        return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
     }
     
 }

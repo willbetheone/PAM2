@@ -10,14 +10,16 @@
 #define __PAM2__RAMesh__
 
 #include <iostream>
-#include <OpenGLES/ES2/gl.h>
+#import <OpenGLES/ES2/gl.h>
 #include "Mat4x4f.h"
 #include "Mat3x3f.h"
-#include "RAVertexAttribBuffer.h"
+#include "RAES2VertexBuffer.h"
 #include "RAES2ShaderProgram.h"
+#include "RAES2VertexArray.h"
+#include "RABoundingBox.h"
 
-namespace RAEngine {
-
+namespace RAEngine
+{
     typedef CGLA::Mat4x4f Mat4x4;
     typedef CGLA::Mat3x3f Mat3x3;
     
@@ -29,6 +31,7 @@ namespace RAEngine {
 
         Mat4x4 viewMatrix;
         Mat4x4 projectionMatrix;
+
         GLsizei numVerticies;
         GLsizei numIndicies;
         
@@ -36,11 +39,17 @@ namespace RAEngine {
         Mat4x4 getModelViewMatrix();
         Mat4x4 getModelMatrix();
         Mat3x3 getNormalMatrix();
-       
-    private:
-
         
+        ///override in the child
+        virtual RABoundingBox getBoundingBox() = 0;
+        
+        ///override in the child
+        virtual int loadObjFile(const char* path) = 0;
+        
+    private:
+    
     protected:
+        
         enum
         {
             UNIFORM_MODELVIEWPROJECTION_MATRIX,
@@ -63,7 +72,7 @@ namespace RAEngine {
             ATTRIB_NORMAL,
             NUM_ATTRIB
         };
-        
+      
         //Display Shader Variables
         GLint attrib[NUM_ATTRIB];
         GLint uniforms[NUM_UNIFORMS];
@@ -73,19 +82,22 @@ namespace RAEngine {
         GLint uniformsDepth[NUM_UNIFORMS];
         
         //Indexed vertex data
-        RAVertexAttribBuffer* positionDataBuffer;
-        RAVertexAttribBuffer* normalDataBuffer;
-        RAVertexAttribBuffer* colorDataBuffer;
-        RAVertexAttribBuffer* indexDataBuffer;
+        RAES2VertexBuffer* positionDataBuffer;
+        RAES2VertexBuffer* normalDataBuffer;
+        RAES2VertexBuffer* colorDataBuffer;
+        RAES2VertexBuffer* indexDataBuffer;
         
         //Interlieved vertex data
-        RAVertexAttribBuffer* vertexDataBuffer;
+        RAES2VertexBuffer* vertexDataBuffer;
+        
+        //Vertex array
+        RAES2VertexArray* vertexArray;
         
         //Shaders
         RAES2ShaderProgram* drawShaderProgram;
         RAES2ShaderProgram* depthShaderProgram;
         
-    };    
+    };
 }
 
 #endif /* defined(__PAM2__RAMesh__) */

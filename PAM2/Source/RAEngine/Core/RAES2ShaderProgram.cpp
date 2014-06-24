@@ -11,6 +11,7 @@
 #include <iostream>
 #include <OpenGLES/ES2/glext.h>
 #include "RALogManager.h"
+#include "assert.h"
 
 namespace RAEngine
 {   
@@ -38,8 +39,8 @@ namespace RAEngine
 
 #pragma mark - PUBLIC METHODS
     
-    int RAES2ShaderProgram::loadProgram(const string& vertexShaderPath,
-                                        const string& fragmentShaderPath)
+    int RAES2ShaderProgram::loadProgram(const std::string& vertexShaderPath,
+                                        const std::string& fragmentShaderPath)
     {
         shaderNameKey = vertexShaderPath + fragmentShaderPath;
         map<string, GLuint>::iterator it = shaderNameToProgramMap.find(shaderNameKey);
@@ -53,6 +54,7 @@ namespace RAEngine
             if (program == 0) {
                 return 0;
             }
+            
             shaderNameToCountMap[shaderNameKey] = 1;
             shaderNameToProgramMap[shaderNameKey] = program;
         }
@@ -67,12 +69,19 @@ namespace RAEngine
     
     GLint RAES2ShaderProgram::getAttributeLocation(const GLchar* name) const
     {
-        return glGetAttribLocation(program, name);
+        GLint loc = glGetAttribLocation(program, name);
+        GL_CHECK_ERROR;
+        assert(loc != -1);
+        return loc;
     }
     
     GLint RAES2ShaderProgram::getUniformLocation(const GLchar* name) const
     {
-        return glGetUniformLocation(program, name);
+        GLint loc = glGetUniformLocation(program, name);
+        GL_CHECK_ERROR;
+        assert(loc != -1);
+        return loc;
+        
     }
 
 #pragma mark - PRIVATE METHODS
@@ -164,6 +173,8 @@ namespace RAEngine
         glCompileShader(*shader);
         GL_CHECK_ERROR;
         
+#ifdef DEBUG
+#if DEBUG
         GLint logLength;
         glGetShaderiv(*shader, GL_INFO_LOG_LENGTH, &logLength);
         GL_CHECK_ERROR;
@@ -173,6 +184,8 @@ namespace RAEngine
             RA_LOG_WARN("Shader compile log: %s", log);
             free(log);
         }
+#endif
+#endif
 
         GLint status;
         glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
@@ -186,12 +199,15 @@ namespace RAEngine
         return 1;
     }
 
+
     int RAES2ShaderProgram::linkProgram(GLuint prog)
     {
         GLint status;
         glLinkProgram(prog);
         GL_CHECK_ERROR;
-        
+
+#ifdef DEBUG
+#if DEBUG
         GLint logLength;
         glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
         GL_CHECK_ERROR;
@@ -201,7 +217,8 @@ namespace RAEngine
             RA_LOG_WARN("Program link log: %s", log);
             free(log);
         }
-        
+#endif
+#endif
         glGetProgramiv(prog, GL_LINK_STATUS, &status);
         if (status == 0) {
             RA_LOG_ERROR("Couldnt link");

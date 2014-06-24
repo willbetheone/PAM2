@@ -18,11 +18,13 @@ namespace PAMMesh {
     
     class PAMManifold : public HMesh::Manifold, public RAEngine::RAMesh
     {
-        public:
-        // Default constructor
+        
+    public:
+        
         PAMManifold();
 
         void setupShaders();
+        
         void bufferVertexDataToGPU();
         
         void normalizeVertexCoordinates();
@@ -34,7 +36,10 @@ namespace PAMMesh {
         
         void draw();
         
-    
+        int loadObjFile(const char* path) override;
+
+        ///calculation intensive, not caching
+        RAEngine::RABoundingBox getBoundingBox() override;
     };
 }
 

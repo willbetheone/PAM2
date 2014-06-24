@@ -10,6 +10,9 @@
 #include "Vec4uc.h"
 #include "RALogManager.h"
 #include <OpenGLES/ES2/glext.h>
+#include <GLKit/GLKMath.h>
+#include <limits.h>
+#include "../HMesh/obj_load.h"
 
 namespace PAMMesh
 {
@@ -22,26 +25,58 @@ namespace PAMMesh
     int COLOR_SIZE =  4 * sizeof(unsigned char);
     int INDEX_SIZE  = sizeof(unsigned int);
     
-    PAMManifold::PAMManifold() : HMesh::Manifold()
+#pragma mark - CONSTRUCTOR/DESTRUCTOR
+    PAMManifold::PAMManifold() : HMesh::Manifold() {}
+
+#pragma mark - INHERITED VIRTUAL FUNCTTIONS
+    int PAMManifold::loadObjFile(const char *path)
     {
+        if (!HMesh::obj_load(path, *this)) {
+            RA_LOG_ERROR("Failed to load obj file %s", path);
+            return 0;
+        }
+
+        return 1;
     }
+    
+    RABoundingBox PAMManifold::getBoundingBox()
+    {
+        Vec3d pmin;
+        Vec3d pmax;
+        HMesh::bbox(*this, pmin, pmax);
+        
+        RABoundingBox boundingBox;
+        boundingBox.minBound = Vec3f(pmin);
+        boundingBox.maxBound = Vec3f(pmax);
+        
+        boundingBox.center =  0.5f * (boundingBox.minBound + boundingBox.maxBound);
+        
+        Vec3f mid = 0.5f * (boundingBox.maxBound - boundingBox.minBound);
+        boundingBox.radius = mid.length();
+        boundingBox.width = fabsf(boundingBox.maxBound[0] - boundingBox.minBound[0]);
+        boundingBox.height = fabsf(boundingBox.maxBound[1] - boundingBox.minBound[1]);
+        boundingBox.depth = fabsf(boundingBox.maxBound[2] - boundingBox.minBound[2]);
+        
+        return boundingBox;
+    }
+    
+    
+#pragma mark - PUBLIC FUNCTIONS
     
     void PAMManifold::setupShaders()
     {
+        std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"].UTF8String);
+        std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"].UTF8String);
+        
         drawShaderProgram = new RAES2ShaderProgram();
-        NSString* vShader = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"vsh"];
-        NSString* fShader = [[NSBundle mainBundle] pathForResource:@"Shader" ofType:@"fsh"];
-        std::string vShader_Cplus([vShader UTF8String]);
-        std::string fShader_Cplus([fShader UTF8String]);
-        
         drawShaderProgram->loadProgram(vShader_Cplus, fShader_Cplus);
-
-        attrib[ATTRIB_POSITION] = drawShaderProgram->getAttributeLocation("position");
-        attrib[ATTRIB_NORMAL] = drawShaderProgram->getAttributeLocation("normal");
-        attrib[ATTRIB_COLOR] = drawShaderProgram->getAttributeLocation("color");
         
-        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("modelViewProjectionMatrix");
-        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("normalMatrix");
+        attrib[ATTRIB_POSITION] = drawShaderProgram->getAttributeLocation("aPosition");
+        attrib[ATTRIB_NORMAL] = drawShaderProgram->getAttributeLocation("aNormal");
+        attrib[ATTRIB_COLOR] = drawShaderProgram->getAttributeLocation("aColor");
+        
+        uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("uModelViewProjectionMatrix");
+        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("uNormalMatrix");
     }
    
     void PAMManifold::bufferVertexDataToGPU()
@@ -51,36 +86,43 @@ namespace PAMMesh
         CGLA::Vec4uc* vertexColors;
         std::vector<unsigned int>* indicies;
         getVertexData(vertexPositions, vertexNormals, vertexColors, indicies);
-        numVerticies = no_vertices();
+
+        assert(no_vertices() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
+        numVerticies = (GLsizei)no_vertices();
         
-        positionDataBuffer = new RAVertexAttribBuffer(VERTEX_SIZE,
+        positionDataBuffer = new RAES2VertexBuffer(VERTEX_SIZE,
                                                       numVerticies,
                                                       vertexPositions,
                                                       GL_DYNAMIC_DRAW,
                                                       GL_ARRAY_BUFFER);
-        positionDataBuffer->enableAttribute(ATTRIB_POSITION);
+        positionDataBuffer->enableAttribute(attrib[ATTRIB_POSITION]);
         
-        normalDataBuffer = new RAVertexAttribBuffer(VERTEX_SIZE,
+        normalDataBuffer = new RAES2VertexBuffer(VERTEX_SIZE,
                                                     numVerticies,
                                                     vertexNormals,
                                                     GL_STATIC_DRAW,
                                                     GL_ARRAY_BUFFER);
-        normalDataBuffer->enableAttribute(ATTRIB_NORMAL);
+        normalDataBuffer->enableAttribute(attrib[ATTRIB_NORMAL]);
         
-        colorDataBuffer = new RAVertexAttribBuffer(COLOR_SIZE,
+        colorDataBuffer = new RAES2VertexBuffer(COLOR_SIZE,
                                                    numVerticies,
                                                    vertexColors,
                                                    GL_STATIC_DRAW,
                                                    GL_ARRAY_BUFFER);
-        colorDataBuffer->enableAttribute(ATTRIB_COLOR);
+        colorDataBuffer->enableAttribute(attrib[ATTRIB_COLOR]);
+
+        assert(indicies->size() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
+        numIndicies = (GLsizei)indicies->size();
         
-        numIndicies = indicies->size();
-        
-        indexDataBuffer = new RAVertexAttribBuffer(INDEX_SIZE,
+        indexDataBuffer = new RAES2VertexBuffer(INDEX_SIZE,
                                                    numIndicies,
                                                    indicies->data(),
                                                    GL_STATIC_DRAW,
                                                    GL_ELEMENT_ARRAY_BUFFER);
+        delete[] vertexPositions;
+        delete[] vertexNormals;
+        delete[] vertexColors;
+        delete indicies;
     }
     
     void PAMManifold::normalizeVertexCoordinates()
@@ -105,7 +147,7 @@ namespace PAMMesh
                                     CGLA::Vec4uc*& vertexColors,
                                     std::vector<unsigned int>*& indicies) const
     {
-        Vec4uc color(200,0,0,255);
+        Vec4uc color(200,200,200,255);
 
         vertexPositions = new Vec3f[no_vertices()];
         vertexNormals = new Vec3f[no_vertices()];
@@ -116,9 +158,8 @@ namespace PAMMesh
         for (VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid, ++i) {
             assert((*vid).index < no_vertices());
             
-            vertexPositions[i] = posf(*vid);;
+            vertexPositions[i] = posf(*vid);
             vertexNormals[i] = HMesh::normalf(*this, *vid);
-//            RA_LOG_INFO("normal %f,%f,%f", vertexNormals[i][0],vertexNormals[i][1], vertexNormals[i][2]);
             vertexColors[i] = color;
         }
         
@@ -149,9 +190,8 @@ namespace PAMMesh
     
     void PAMManifold::draw()
     {
-        
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
-        Mat3x3 normal = transpose(getNormalMatrix());
+        Mat3x3 normalMat = transpose(getNormalMatrix());
         
         glPushGroupMarkerEXT(0, "Drawing PAM");
         
@@ -159,18 +199,18 @@ namespace PAMMesh
         GL_CHECK_ERROR;
         glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, mvpMat.get());
         GL_CHECK_ERROR;
-        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, normal.get());
+        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, normalMat.get());
         GL_CHECK_ERROR;
-        
+
         positionDataBuffer->bind();
         positionDataBuffer->prepareToDraw(attrib[ATTRIB_POSITION], 3, 0, GL_FLOAT, GL_FALSE);
-
+        
         normalDataBuffer->bind();
         normalDataBuffer->prepareToDraw(attrib[ATTRIB_NORMAL], 3, 0, GL_FLOAT, GL_FALSE);
         
         colorDataBuffer->bind();
         colorDataBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
-        
+
         indexDataBuffer->bind();
         indexDataBuffer->drawPreparedArraysIndicies(GL_TRIANGLES, GL_UNSIGNED_INT, numIndicies);
         
@@ -179,4 +219,5 @@ namespace PAMMesh
         
         glPopGroupMarkerEXT();
     }
+
 }
