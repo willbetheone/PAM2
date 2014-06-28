@@ -11,12 +11,17 @@
 
 #include <iostream>
 #include "Vec3f.h"
+//#include "RAMesh.h"
 
 namespace RAEngine {
 
-    class RABoundingBox
+    class RABoundingBox 
     {
     public:
+        RABoundingBox();
+        RABoundingBox(CGLA::Vec3f pmin, CGLA::Vec3f pmax);
+
+    private:
         CGLA::Vec3f minBound;
         CGLA::Vec3f maxBound;
         CGLA::Vec3f center;

@@ -11,6 +11,7 @@
 
 #include <iostream>
 #include "Mat4x4f.h"
+#include "TouchScreenGestureStates.h"
 
 namespace RAEngine {
     class RATranslationManager
@@ -18,7 +19,8 @@ namespace RAEngine {
     public:
         RATranslationManager();
         CGLA::Mat4x4f getTranslationMatrix() const;
-        void handlePanGesture(UIGestureRecognizer* sender);
+        void translate(CGLA::Vec3f translation);
+        void handlePanGesture(GestureState state, CGLA::Vec3f translation);
     private:
         CGLA::Mat4x4f translationMatrix;
         CGLA::Mat4x4f accumulatedTranslation;

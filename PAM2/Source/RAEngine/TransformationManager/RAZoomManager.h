@@ -10,13 +10,14 @@
 #define __PAM2__RAZoomManager__
 
 #include <iostream>
+#include "TouchScreenGestureStates.h"
 
 namespace RAEngine {
     class RAZoomManager
     {
     public:
         float getScaleFactor() const;
-        void handlePinchGesture(UIGestureRecognizer* sender);
+        void handlePinchGesture(GestureState state, float scale);
     private:
         float scaleFactor = 1.0f;
         float curFactor;

@@ -17,6 +17,10 @@ namespace RAEngine {
     {
         viewMatrix = identity_Mat4x4f();
         projectionMatrix = identity_Mat4x4f();
+        
+        translationMatrix = identity_Mat4x4f();
+        rotationMatrix = identity_Mat4x4f();
+        scaleMatrix = identity_Mat4x4f();
     }
     
     RAMesh::~RAMesh()
@@ -50,7 +54,11 @@ namespace RAEngine {
     
     Mat4x4 RAMesh::getModelMatrix()
     {
-        return identity_Mat4x4f();
+        Mat4x4 modelMatrix = identity_Mat4x4f();
+        modelMatrix = translationMatrix * modelMatrix ;
+        modelMatrix = rotationMatrix * modelMatrix  ;
+        //        modelMatrix = translationManager->getTranslationMatrix() * modelMatrix;
+        return modelMatrix;
     }
     
     Mat3x3 RAMesh::getNormalMatrix()
@@ -58,4 +66,26 @@ namespace RAEngine {
         return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
     }
     
+    void RAMesh::rotate(float radians, Vec3 axis)
+    {
+        Vec3f modelAxis = Vec3f(invert_ortho(getModelViewMatrix()) * Vec4f(axis, 0));
+        Mat4x4f rm = rotation_Mat4x4f(modelAxis, radians);
+        rotationMatrix = rotationMatrix * rm;
+    }
+    
+    void RAMesh::rotate(float radians, Vec3 axis, Vec3 toOriginVec)
+    {
+        
+        Mat4x4 toOrigin = translation_Mat4x4f(toOriginVec);
+        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toOriginVec);
+        Mat4x4 rotMat = rotation_Mat4x4f(axis, radians);
+        
+        rotationMatrix = rotationMatrix*fromOrigin * rotMat * toOrigin;
+    }
+    
+    void RAMesh::translate(Vec3 translation)
+    {
+        translationMatrix =  translationMatrix * translation_Mat4x4f(translation);
+    }
+
 }

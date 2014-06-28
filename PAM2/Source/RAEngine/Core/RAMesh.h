@@ -16,12 +16,19 @@
 #include "RAES2VertexBuffer.h"
 #include "RAES2ShaderProgram.h"
 #include "RAES2VertexArray.h"
-#include "RABoundingBox.h"
 
 namespace RAEngine
 {
     typedef CGLA::Mat4x4f Mat4x4;
     typedef CGLA::Mat3x3f Mat3x3;
+    typedef CGLA::Vec3f Vec3;
+    
+    struct Bounds {
+        Vec3 minBound;
+        Vec3 maxBound;
+        Vec3 center;
+        float radius;
+    };
     
     class RAMesh
     {
@@ -40,8 +47,17 @@ namespace RAEngine
         Mat4x4 getModelMatrix();
         Mat3x3 getNormalMatrix();
         
+        Mat4x4 translationMatrix;
+        Mat4x4 rotationMatrix;
+        Mat4x4 scaleMatrix;
+        
+        void rotate(float radians, Vec3 axis); //rotates around world origin
+        void rotate(float radians, Vec3 axis, Vec3 toOriginVec);
+        void translate(Vec3 translation);
+
+        
         ///override in the child
-        virtual RABoundingBox getBoundingBox() = 0;
+        virtual Bounds getBoundingBox() = 0;
         
         ///override in the child
         virtual int loadObjFile(const char* path) = 0;

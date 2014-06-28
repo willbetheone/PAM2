@@ -11,6 +11,8 @@
 
 #include <iostream>
 #include "Mat4x4f.h"
+#include "Vec2i.h"
+#include "TouchScreenGestureStates.h"
 
 namespace RAEngine
 {
@@ -19,10 +21,11 @@ namespace RAEngine
     public:
         RARotationManager();
         CGLA::Mat4x4f getRotationMatrix() const;
-        void handlePanGesture(UIGestureRecognizer* sender);
-        void handleRotationGesture(UIGestureRecognizer* sender);
+        void handlePanGesture(GestureState state, CGLA::Vec2i glTouch, CGLA::Vec3f pivotPoint);
+        void handleRotationGesture(GestureState state, float rotation, CGLA::Vec3f pivotPoint);
+        
     private:
-        CGPoint lastLoc;
+        CGLA::Vec2i lastLoc;
         float lastRot;
         CGLA::Mat4x4f manualRotationMatrix;
     };

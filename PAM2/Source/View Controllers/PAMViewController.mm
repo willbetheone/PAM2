@@ -13,6 +13,7 @@
 #include "RARotationManager.h"
 #include "RAZoomManager.h"
 #include "RATranslationManager.h"
+#include "RABoundingBox.h"
 
 using namespace CGLA;
 using namespace PAMMesh;
@@ -28,12 +29,15 @@ using namespace RAEngine;
     Mat4x4f projectionMatrix;
     
     PAMManifold* pamManifold;
+    RABoundingBox* boundingBox;
     
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
     
-    RABoundingBox boundingBox;
+    Bounds bounds;
+    
+    Vec3f viewVolumeCenter;
 }
 
 @end
@@ -48,7 +52,6 @@ using namespace RAEngine;
         rotManager = new RARotationManager();
         zoomManager = new RAZoomManager();
         translationManager = new RATranslationManager();
-        boundingBox = RABoundingBox();
     }
     return self;
 }
@@ -136,25 +139,58 @@ using namespace RAEngine;
     [view addGestureRecognizer:twoFingerTranslation];
 }
 
--(void)handleOneFingerPanGesture:(UIGestureRecognizer*)sender
+-(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
 {
-    rotManager->handlePanGesture(sender);
+    GestureState state;
+    switch (sender.state) {
+        case UIGestureRecognizerStateBegan:
+            state = GestureState::Began;
+            break;
+        case UIGestureRecognizerStateChanged:
+            state = GestureState::Changed;
+            break;
+        case UIGestureRecognizerStateEnded:
+            state = GestureState::Ended;
+            break;
+        default:
+            break;
+    }
+    return state;
 }
 
--(void)handleRotationGesture:(UIGestureRecognizer*)sender
+-(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
-    rotManager->handleRotationGesture(sender);
+    CGPoint cocoaTouch = [sender locationInView:sender.view];
+    Vec2i glTouch = Vec2i(cocoaTouch.x, [sender.view bounds].size.height - cocoaTouch.y);
+    GestureState state = [self gestureStateForRecognizer:sender];
+    rotManager->handlePanGesture(state, glTouch, viewVolumeCenter);
 }
 
--(void)handlePinchGesture:(UIGestureRecognizer*)sender
+-(void)handleRotationGesture:(UIRotationGestureRecognizer*)sender
 {
-    zoomManager->handlePinchGesture(sender);
+    GestureState state = [self gestureStateForRecognizer:sender];
+    float rotaion = [sender rotation];
+    rotManager->handleRotationGesture(state, rotaion, viewVolumeCenter);
 }
 
--(void)handleTwoFingerPanGesture:(UIGestureRecognizer*)sender
+-(void)handlePinchGesture:(UIPinchGestureRecognizer*)sender
 {
-    translationManager->handlePanGesture(sender);
+    GestureState state = [self gestureStateForRecognizer:sender];
+    zoomManager->handlePinchGesture(state, sender.scale);
 }
+
+-(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
+{
+    CGPoint point = [sender translationInView:sender.view];
+    
+    GLfloat ratio = sender.view.frame.size.height/sender.view.frame.size.width;
+    GLfloat x_ndc = point.x/sender.view.frame.size.width;
+    GLfloat y_ndc = -1*(point.y/sender.view.frame.size.height)*ratio;
+    Vec3f axis(x_ndc*2, y_ndc*2, 0);
+    GestureState state = [self gestureStateForRecognizer:sender];
+    translationManager->handlePanGesture(state, axis);
+}
+
 
 - (void)didReceiveMemoryWarning
 {
@@ -177,7 +213,18 @@ using namespace RAEngine;
         pamManifold->loadObjFile(objPath.UTF8String);
         pamManifold->setupShaders();
         pamManifold->bufferVertexDataToGPU();
-        boundingBox = pamManifold->getBoundingBox();
+        bounds = pamManifold->getBoundingBox();
+        
+        float rad = bounds.radius;
+        GLfloat zNear = 1.0;
+        
+        GLfloat newOriginZ = -1*(zNear + rad);
+        GLfloat curOriginZ = bounds.center[2];
+        
+        pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+        viewVolumeCenter = pamManifold->getModelMatrix() * Vec4f(bounds.center);
+        
+        boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
     }
     
     [self setPaused:NO];
@@ -187,29 +234,21 @@ using namespace RAEngine;
 
 -(void)update
 {
-    
-    float diam = boundingBox.radius*2;
-    Vec3f c = boundingBox.center;
+    float rad = bounds.radius;
+    float diam = rad * 2.0f;
+    Vec3f c = bounds.center;
     GLfloat zNear = 1.0;
     GLfloat zFar = zNear + diam;
 
-    GLfloat left = c[0] - diam;
-    GLfloat right = c[0] + diam;
-    GLfloat bottom = c[1] - diam;
-    GLfloat top = c[1] + diam;
+    GLfloat left = c[0] - rad;
+    GLfloat right = c[0] + rad;
+    GLfloat bottom = c[1] - rad;
+    GLfloat top = c[1] + rad;
 
     GLfloat aspect = (GLfloat)_glWidth / (GLfloat)_glHeight;
 
-    if ( aspect < 1.0 ) { // window taller than wide
-      bottom /= aspect;
-      top /= aspect;
-    } else {
-      left *= aspect;
-      right *= aspect;
-    }
-    
-//    GLfloat aspectRatio = (GLfloat)_glHeight / (GLfloat)_glWidth;
     float scale = 1.0f/zoomManager->getScaleFactor();
+
 //    float scale = 1.0f;
 //    float bboxRadius = boundingBox.radius;
 //    projectionMatrix = ortho_Mat4x4f(-1*scale*bboxRadius,
@@ -218,13 +257,13 @@ using namespace RAEngine;
 //                                      1*aspectRatio*scale*bboxRadius,
 //                                     -1*2*bboxRadius,
 //                                      1*2*bboxRadius);
-    
-    projectionMatrix = ortho_Mat4x4f(left*scale, right*scale, bottom*scale, top*scale, -1*zFar, zFar);
-    
+
+    projectionMatrix = ortho_Mat4x4f(left*scale*aspect, right*scale*aspect, bottom*scale, top*scale, zNear, zFar);
 
     viewMatrix = identity_Mat4x4f();
-    viewMatrix *= translationManager->getTranslationMatrix();
-    viewMatrix *= rotManager->getRotationMatrix();
+    viewMatrix = viewMatrix * translationManager->getTranslationMatrix();
+    viewMatrix = viewMatrix * rotManager->getRotationMatrix();
+
 }
 
 -(void)glkView:(GLKView *)view drawInRect:(CGRect)rect

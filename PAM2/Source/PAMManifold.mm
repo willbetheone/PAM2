@@ -39,25 +39,18 @@ namespace PAMMesh
         return 1;
     }
     
-    RABoundingBox PAMManifold::getBoundingBox()
+    Bounds PAMManifold::getBoundingBox()
     {
         Vec3d pmin;
         Vec3d pmax;
         HMesh::bbox(*this, pmin, pmax);
         
-        RABoundingBox boundingBox;
-        boundingBox.minBound = Vec3f(pmin);
-        boundingBox.maxBound = Vec3f(pmax);
+        Vec3d mid = pmax - pmin;
+        float radius = 0.5*mid.length();
+        Vec3d center =  pmin + radius*normalize(pmax);
         
-        boundingBox.center =  0.5f * (boundingBox.minBound + boundingBox.maxBound);
-        
-        Vec3f mid = 0.5f * (boundingBox.maxBound - boundingBox.minBound);
-        boundingBox.radius = mid.length();
-        boundingBox.width = fabsf(boundingBox.maxBound[0] - boundingBox.minBound[0]);
-        boundingBox.height = fabsf(boundingBox.maxBound[1] - boundingBox.minBound[1]);
-        boundingBox.depth = fabsf(boundingBox.maxBound[2] - boundingBox.minBound[2]);
-        
-        return boundingBox;
+        Bounds bnds = {Vec3(pmin), Vec3(pmax), Vec3(center), radius};
+        return bnds;
     }
     
     

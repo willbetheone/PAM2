@@ -11,14 +11,12 @@
 
 namespace RAEngine
 {
-    void RAZoomManager::handlePinchGesture(UIGestureRecognizer* sender)
+    void RAZoomManager::handlePinchGesture(GestureState state, float scale)
     {
-        UIPinchGestureRecognizer* pinch = (UIPinchGestureRecognizer*) sender;
-        if (sender.state == UIGestureRecognizerStateBegan)
-        {
+        if (state == GestureState::Began) {
             curFactor = scaleFactor;
         } else {
-            scaleFactor = curFactor * [pinch scale];
+            scaleFactor = curFactor * scale;
         }
     }
     

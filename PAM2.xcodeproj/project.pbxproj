@@ -24,20 +24,17 @@
 		150CB2151948F88900636103 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2141948F88900636103 /* GLKit.framework */; };
 		150CB2221949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
 		150CB2231949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
-		1559EBCE1952AB4E00B235F2 /* RAZoomManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */; };
-		1559EBCF1952AB4E00B235F2 /* RAZoomManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */; };
-		1559EBD51952B02700B235F2 /* RATranslationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBD31952B02700B235F2 /* RATranslationManager.mm */; };
-		1559EBD61952B02700B235F2 /* RATranslationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1559EBD31952B02700B235F2 /* RATranslationManager.mm */; };
 		15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		15736AFE195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		157B96211958BEB3008599EC /* PAM.obj in Resources */ = {isa = PBXBuildFile; fileRef = 157B96201958BEB3008599EC /* PAM.obj */; };
-		15B0017619523A26002A238D /* RARotationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B0017419523A26002A238D /* RARotationManager.mm */; };
-		15B0017719523A26002A238D /* RARotationManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B0017419523A26002A238D /* RARotationManager.mm */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
 		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAES2VertexBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAES2VertexBuffer.cpp */; };
 		15B8A429194CD28900CD578C /* Shader.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8A427194CD28900CD578C /* Shader.fsh */; };
 		15B8A42A194CD28900CD578C /* Shader.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8A428194CD28900CD578C /* Shader.vsh */; };
+		15B8BE4A195E547F00CE2AE6 /* RARotationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE43195E547F00CE2AE6 /* RARotationManager.cpp */; };
+		15B8BE4B195E547F00CE2AE6 /* RATranslationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE45195E547F00CE2AE6 /* RATranslationManager.cpp */; };
+		15B8BE4C195E547F00CE2AE6 /* RAZoomManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE47195E547F00CE2AE6 /* RAZoomManager.cpp */; };
 		15D4F0B71958EF5B001245FB /* RAES2VertexArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */; };
 		15D4F0B81958EF5B001245FB /* RAES2VertexArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */; };
 		15D4F0C01958F678001245FB /* BasePAMViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0BD1958F678001245FB /* BasePAMViewController.mm */; };
@@ -121,14 +118,8 @@
 		151926221953D8930006BC76 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		151926231953D8930006BC76 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		151926241953D8930006BC76 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RAZoomManager.mm; path = Source/RAEngine/TransformationManager/RAZoomManager.mm; sourceTree = "<group>"; };
-		1559EBCD1952AB4E00B235F2 /* RAZoomManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAZoomManager.h; path = Source/RAEngine/TransformationManager/RAZoomManager.h; sourceTree = "<group>"; };
-		1559EBD31952B02700B235F2 /* RATranslationManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RATranslationManager.mm; path = Source/RAEngine/TransformationManager/RATranslationManager.mm; sourceTree = "<group>"; };
-		1559EBD41952B02700B235F2 /* RATranslationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RATranslationManager.h; path = Source/RAEngine/TransformationManager/RATranslationManager.h; sourceTree = "<group>"; };
 		15736AFC195156AC00055052 /* HAND PAM 15.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "HAND PAM 15.obj"; path = "Temp Files/HAND PAM 15.obj"; sourceTree = "<group>"; };
 		157B96201958BEB3008599EC /* PAM.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PAM.obj; path = "Temp Files/PAM.obj"; sourceTree = "<group>"; };
-		15B0017419523A26002A238D /* RARotationManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = RARotationManager.mm; path = Source/RAEngine/TransformationManager/RARotationManager.mm; sourceTree = "<group>"; };
-		15B0017519523A26002A238D /* RARotationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RARotationManager.h; path = Source/RAEngine/TransformationManager/RARotationManager.h; sourceTree = "<group>"; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
 		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -137,6 +128,13 @@
 		15B8A420194CD1D900CD578C /* RAES2VertexBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAES2VertexBuffer.h; path = Source/RAEngine/Core/RAES2VertexBuffer.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A427194CD28900CD578C /* Shader.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.fsh; path = Source/RAEngine/Shaders/Shader.fsh; sourceTree = "<group>"; };
 		15B8A428194CD28900CD578C /* Shader.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = Shader.vsh; path = Source/RAEngine/Shaders/Shader.vsh; sourceTree = "<group>"; };
+		15B8BE43195E547F00CE2AE6 /* RARotationManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RARotationManager.cpp; sourceTree = "<group>"; };
+		15B8BE44195E547F00CE2AE6 /* RARotationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RARotationManager.h; sourceTree = "<group>"; };
+		15B8BE45195E547F00CE2AE6 /* RATranslationManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RATranslationManager.cpp; sourceTree = "<group>"; };
+		15B8BE46195E547F00CE2AE6 /* RATranslationManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RATranslationManager.h; sourceTree = "<group>"; };
+		15B8BE47195E547F00CE2AE6 /* RAZoomManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RAZoomManager.cpp; sourceTree = "<group>"; };
+		15B8BE48195E547F00CE2AE6 /* RAZoomManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RAZoomManager.h; sourceTree = "<group>"; };
+		15B8BE49195E547F00CE2AE6 /* TouchScreenGestureStates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TouchScreenGestureStates.h; sourceTree = "<group>"; };
 		15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAES2VertexArray.cpp; path = Source/RAEngine/Core/RAES2VertexArray.cpp; sourceTree = "<group>"; };
 		15D4F0B61958EF5B001245FB /* RAES2VertexArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAES2VertexArray.h; path = Source/RAEngine/Core/RAES2VertexArray.h; sourceTree = "<group>"; };
 		15D4F0BC1958F678001245FB /* BasePAMViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BasePAMViewController.h; path = "Source/View Controllers/BasePAMViewController.h"; sourceTree = "<group>"; };
@@ -294,19 +292,6 @@
 			name = TempFiles;
 			sourceTree = "<group>";
 		};
-		15B0016819523994002A238D /* Transformation Managers */ = {
-			isa = PBXGroup;
-			children = (
-				15B0017419523A26002A238D /* RARotationManager.mm */,
-				15B0017519523A26002A238D /* RARotationManager.h */,
-				1559EBCC1952AB4E00B235F2 /* RAZoomManager.mm */,
-				1559EBCD1952AB4E00B235F2 /* RAZoomManager.h */,
-				1559EBD31952B02700B235F2 /* RATranslationManager.mm */,
-				1559EBD41952B02700B235F2 /* RATranslationManager.h */,
-			);
-			name = "Transformation Managers";
-			sourceTree = "<group>";
-		};
 		15B8A419194CD1AB00CD578C /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
@@ -333,6 +318,21 @@
 			name = Core;
 			sourceTree = "<group>";
 		};
+		15B8BE42195E547F00CE2AE6 /* TransformationManager */ = {
+			isa = PBXGroup;
+			children = (
+				15B8BE43195E547F00CE2AE6 /* RARotationManager.cpp */,
+				15B8BE44195E547F00CE2AE6 /* RARotationManager.h */,
+				15B8BE45195E547F00CE2AE6 /* RATranslationManager.cpp */,
+				15B8BE46195E547F00CE2AE6 /* RATranslationManager.h */,
+				15B8BE47195E547F00CE2AE6 /* RAZoomManager.cpp */,
+				15B8BE48195E547F00CE2AE6 /* RAZoomManager.h */,
+				15B8BE49195E547F00CE2AE6 /* TouchScreenGestureStates.h */,
+			);
+			name = TransformationManager;
+			path = Source/RAEngine/TransformationManager;
+			sourceTree = "<group>";
+		};
 		15B93157194A821E0020FA2D /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
@@ -347,8 +347,8 @@
 		15C649601949393D00640630 /* RAEngine */ = {
 			isa = PBXGroup;
 			children = (
+				15B8BE42195E547F00CE2AE6 /* TransformationManager */,
 				15D4F0C41958F691001245FB /* Logging */,
-				15B0016819523994002A238D /* Transformation Managers */,
 				15B8A419194CD1AB00CD578C /* Shaders */,
 				15B8A41A194CD1B500CD578C /* Core */,
 			);
@@ -507,20 +507,20 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15B8BE4A195E547F00CE2AE6 /* RARotationManager.cpp in Sources */,
 				15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */,
 				150CB1D71948E6B900636103 /* AppDelegate.mm in Sources */,
-				1559EBD51952B02700B235F2 /* RATranslationManager.mm in Sources */,
+				15B8BE4B195E547F00CE2AE6 /* RATranslationManager.cpp in Sources */,
 				150CB1D31948E6B900636103 /* main.m in Sources */,
 				15D4F0C01958F678001245FB /* BasePAMViewController.mm in Sources */,
 				15D4F0C21958F678001245FB /* PAMViewController.mm in Sources */,
 				15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */,
-				1559EBCE1952AB4E00B235F2 /* RAZoomManager.mm in Sources */,
-				15B0017619523A26002A238D /* RARotationManager.mm in Sources */,
 				150CB2221949019000636103 /* PAMManifold.mm in Sources */,
 				15B8A423194CD1D900CD578C /* RAES2VertexBuffer.cpp in Sources */,
 				15D4F0B71958EF5B001245FB /* RAES2VertexArray.cpp in Sources */,
 				15D4F0CB19591BEF001245FB /* RABoundingBox.cpp in Sources */,
 				15D4F0C71958F691001245FB /* RALogManager.cpp in Sources */,
+				15B8BE4C195E547F00CE2AE6 /* RAZoomManager.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -531,11 +531,8 @@
 				15D4F0C11958F678001245FB /* BasePAMViewController.mm in Sources */,
 				150CB2231949019000636103 /* PAMManifold.mm in Sources */,
 				150CB1EC1948E6B900636103 /* PAM2Tests.m in Sources */,
-				1559EBD61952B02700B235F2 /* RATranslationManager.mm in Sources */,
-				15B0017719523A26002A238D /* RARotationManager.mm in Sources */,
 				15D4F0C31958F678001245FB /* PAMViewController.mm in Sources */,
 				15D4F0CC19591BEF001245FB /* RABoundingBox.cpp in Sources */,
-				1559EBCF1952AB4E00B235F2 /* RAZoomManager.mm in Sources */,
 				15D4F0B81958EF5B001245FB /* RAES2VertexArray.cpp in Sources */,
 				15D4F0C81958F691001245FB /* RALogManager.cpp in Sources */,
 			);

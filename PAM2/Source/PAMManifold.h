@@ -39,7 +39,7 @@ namespace PAMMesh {
         int loadObjFile(const char* path) override;
 
         ///calculation intensive, not caching
-        RAEngine::RABoundingBox getBoundingBox() override;
+        RAEngine::Bounds getBoundingBox() override;
     };
 }
 
