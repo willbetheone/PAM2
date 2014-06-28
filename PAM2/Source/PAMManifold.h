@@ -34,12 +34,12 @@ namespace PAMMesh {
                            CGLA::Vec4uc*& vertexColors,
                            std::vector<unsigned int>*& indicies) const;
         
-        void draw();
+        void draw() const override;
         
         int loadObjFile(const char* path) override;
 
         ///calculation intensive, not caching
-        RAEngine::Bounds getBoundingBox() override;
+        RAEngine::Bounds getBoundingBox() const override;
     };
 }
 

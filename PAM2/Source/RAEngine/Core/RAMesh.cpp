@@ -42,17 +42,17 @@ namespace RAEngine {
         delete depthShaderProgram;
     }
     
-    Mat4x4 RAMesh::getModelViewProjectionMatrix()
+    Mat4x4 RAMesh::getModelViewProjectionMatrix() const
     {
         return projectionMatrix * getModelViewMatrix();
     }
     
-    Mat4x4 RAMesh::getModelViewMatrix()
+    Mat4x4 RAMesh::getModelViewMatrix() const
     {
         return viewMatrix * getModelMatrix();
     }
     
-    Mat4x4 RAMesh::getModelMatrix()
+    Mat4x4 RAMesh::getModelMatrix() const
     {
         Mat4x4 modelMatrix = identity_Mat4x4f();
         modelMatrix = translationMatrix * modelMatrix ;
@@ -61,7 +61,7 @@ namespace RAEngine {
         return modelMatrix;
     }
     
-    Mat3x3 RAMesh::getNormalMatrix()
+    Mat3x3 RAMesh::getNormalMatrix() const
     {
         return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
     }
@@ -86,6 +86,11 @@ namespace RAEngine {
     void RAMesh::translate(Vec3 translation)
     {
         translationMatrix =  translationMatrix * translation_Mat4x4f(translation);
+    }
+    
+    int RAMesh::loadObjFile(const char* path)
+    {
+        return 0;
     }
 
 }

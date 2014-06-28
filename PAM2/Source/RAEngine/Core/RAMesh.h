@@ -42,10 +42,10 @@ namespace RAEngine
         GLsizei numVerticies;
         GLsizei numIndicies;
         
-        Mat4x4 getModelViewProjectionMatrix();
-        Mat4x4 getModelViewMatrix();
-        Mat4x4 getModelMatrix();
-        Mat3x3 getNormalMatrix();
+        Mat4x4 getModelViewProjectionMatrix() const;
+        Mat4x4 getModelViewMatrix() const;
+        Mat4x4 getModelMatrix() const;
+        Mat3x3 getNormalMatrix() const;
         
         Mat4x4 translationMatrix;
         Mat4x4 rotationMatrix;
@@ -55,12 +55,14 @@ namespace RAEngine
         void rotate(float radians, Vec3 axis, Vec3 toOriginVec);
         void translate(Vec3 translation);
 
+        ///override in the child
+        virtual Bounds getBoundingBox() const = 0;
         
         ///override in the child
-        virtual Bounds getBoundingBox() = 0;
+        virtual int loadObjFile(const char* path);
         
         ///override in the child
-        virtual int loadObjFile(const char* path) = 0;
+        virtual void draw() const = 0;
         
     private:
     

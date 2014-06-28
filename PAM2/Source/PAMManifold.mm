@@ -21,9 +21,9 @@ namespace PAMMesh
     using namespace CGLA;
     using namespace std;
     
-    int VERTEX_SIZE =  3 * sizeof(float);
-    int COLOR_SIZE =  4 * sizeof(unsigned char);
-    int INDEX_SIZE  = sizeof(unsigned int);
+//    int VERTEX_SIZE =  3 * sizeof(float);
+//    int COLOR_SIZE =  4 * sizeof(unsigned char);
+//    int INDEX_SIZE  = sizeof(unsigned int);
     
 #pragma mark - CONSTRUCTOR/DESTRUCTOR
     PAMManifold::PAMManifold() : HMesh::Manifold() {}
@@ -39,7 +39,7 @@ namespace PAMMesh
         return 1;
     }
     
-    Bounds PAMManifold::getBoundingBox()
+    RAEngine::Bounds PAMManifold::getBoundingBox() const
     {
         Vec3d pmin;
         Vec3d pmax;
@@ -52,8 +52,7 @@ namespace PAMMesh
         Bounds bnds = {Vec3(pmin), Vec3(pmax), Vec3(center), radius};
         return bnds;
     }
-    
-    
+        
 #pragma mark - PUBLIC FUNCTIONS
     
     void PAMManifold::setupShaders()
@@ -83,35 +82,35 @@ namespace PAMMesh
         assert(no_vertices() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
         numVerticies = (GLsizei)no_vertices();
         
-        positionDataBuffer = new RAES2VertexBuffer(VERTEX_SIZE,
-                                                      numVerticies,
-                                                      vertexPositions,
-                                                      GL_DYNAMIC_DRAW,
-                                                      GL_ARRAY_BUFFER);
+        positionDataBuffer = new RAES2VertexBuffer(sizeof(Vec3f),
+                                                   numVerticies,
+                                                   vertexPositions,
+                                                   GL_DYNAMIC_DRAW,
+                                                   GL_ARRAY_BUFFER);
         positionDataBuffer->enableAttribute(attrib[ATTRIB_POSITION]);
         
-        normalDataBuffer = new RAES2VertexBuffer(VERTEX_SIZE,
-                                                    numVerticies,
-                                                    vertexNormals,
-                                                    GL_STATIC_DRAW,
-                                                    GL_ARRAY_BUFFER);
+        normalDataBuffer = new RAES2VertexBuffer(sizeof(Vec3f),
+                                                 numVerticies,
+                                                 vertexNormals,
+                                                 GL_STATIC_DRAW,
+                                                 GL_ARRAY_BUFFER);
         normalDataBuffer->enableAttribute(attrib[ATTRIB_NORMAL]);
         
-        colorDataBuffer = new RAES2VertexBuffer(COLOR_SIZE,
-                                                   numVerticies,
-                                                   vertexColors,
-                                                   GL_STATIC_DRAW,
-                                                   GL_ARRAY_BUFFER);
+        colorDataBuffer = new RAES2VertexBuffer(sizeof(Vec4uc),
+                                                numVerticies,
+                                                vertexColors,
+                                                GL_STATIC_DRAW,
+                                                GL_ARRAY_BUFFER);
         colorDataBuffer->enableAttribute(attrib[ATTRIB_COLOR]);
 
         assert(indicies->size() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
         numIndicies = (GLsizei)indicies->size();
         
-        indexDataBuffer = new RAES2VertexBuffer(INDEX_SIZE,
-                                                   numIndicies,
-                                                   indicies->data(),
-                                                   GL_STATIC_DRAW,
-                                                   GL_ELEMENT_ARRAY_BUFFER);
+        indexDataBuffer = new RAES2VertexBuffer(sizeof(unsigned int),
+                                                numIndicies,
+                                                indicies->data(),
+                                                GL_STATIC_DRAW,
+                                                GL_ELEMENT_ARRAY_BUFFER);
         delete[] vertexPositions;
         delete[] vertexNormals;
         delete[] vertexColors;
@@ -181,7 +180,7 @@ namespace PAMMesh
         }
     }
     
-    void PAMManifold::draw()
+    void PAMManifold::draw() const
     {
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
         Mat3x3 normalMat = transpose(getNormalMatrix());

@@ -35,6 +35,9 @@
 		15B8BE4A195E547F00CE2AE6 /* RARotationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE43195E547F00CE2AE6 /* RARotationManager.cpp */; };
 		15B8BE4B195E547F00CE2AE6 /* RATranslationManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE45195E547F00CE2AE6 /* RATranslationManager.cpp */; };
 		15B8BE4C195E547F00CE2AE6 /* RAZoomManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE47195E547F00CE2AE6 /* RAZoomManager.cpp */; };
+		15B8BE4F195E68C400CE2AE6 /* PosColorShader.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8BE4D195E68C400CE2AE6 /* PosColorShader.fsh */; };
+		15B8BE50195E68C400CE2AE6 /* PosColorShader.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 15B8BE4E195E68C400CE2AE6 /* PosColorShader.vsh */; };
+		15B8BE53195E715200CE2AE6 /* RAPoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8BE51195E715200CE2AE6 /* RAPoint.cpp */; };
 		15D4F0B71958EF5B001245FB /* RAES2VertexArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */; };
 		15D4F0B81958EF5B001245FB /* RAES2VertexArray.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */; };
 		15D4F0C01958F678001245FB /* BasePAMViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15D4F0BD1958F678001245FB /* BasePAMViewController.mm */; };
@@ -135,6 +138,10 @@
 		15B8BE47195E547F00CE2AE6 /* RAZoomManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RAZoomManager.cpp; sourceTree = "<group>"; };
 		15B8BE48195E547F00CE2AE6 /* RAZoomManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RAZoomManager.h; sourceTree = "<group>"; };
 		15B8BE49195E547F00CE2AE6 /* TouchScreenGestureStates.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TouchScreenGestureStates.h; sourceTree = "<group>"; };
+		15B8BE4D195E68C400CE2AE6 /* PosColorShader.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = PosColorShader.fsh; path = Source/RAEngine/Shaders/PosColorShader.fsh; sourceTree = "<group>"; };
+		15B8BE4E195E68C400CE2AE6 /* PosColorShader.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; name = PosColorShader.vsh; path = Source/RAEngine/Shaders/PosColorShader.vsh; sourceTree = "<group>"; };
+		15B8BE51195E715200CE2AE6 /* RAPoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAPoint.cpp; path = Source/RAEngine/Core/RAPoint.cpp; sourceTree = "<group>"; };
+		15B8BE52195E715200CE2AE6 /* RAPoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAPoint.h; path = Source/RAEngine/Core/RAPoint.h; sourceTree = "<group>"; };
 		15D4F0B51958EF5B001245FB /* RAES2VertexArray.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAES2VertexArray.cpp; path = Source/RAEngine/Core/RAES2VertexArray.cpp; sourceTree = "<group>"; };
 		15D4F0B61958EF5B001245FB /* RAES2VertexArray.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAES2VertexArray.h; path = Source/RAEngine/Core/RAES2VertexArray.h; sourceTree = "<group>"; };
 		15D4F0BC1958F678001245FB /* BasePAMViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BasePAMViewController.h; path = "Source/View Controllers/BasePAMViewController.h"; sourceTree = "<group>"; };
@@ -295,6 +302,8 @@
 		15B8A419194CD1AB00CD578C /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
+				15B8BE4D195E68C400CE2AE6 /* PosColorShader.fsh */,
+				15B8BE4E195E68C400CE2AE6 /* PosColorShader.vsh */,
 				15B8A427194CD28900CD578C /* Shader.fsh */,
 				15B8A428194CD28900CD578C /* Shader.vsh */,
 			);
@@ -314,6 +323,8 @@
 				15D4F0B61958EF5B001245FB /* RAES2VertexArray.h */,
 				15D4F0C919591BEF001245FB /* RABoundingBox.cpp */,
 				15D4F0CA19591BEF001245FB /* RABoundingBox.h */,
+				15B8BE51195E715200CE2AE6 /* RAPoint.cpp */,
+				15B8BE52195E715200CE2AE6 /* RAPoint.h */,
 			);
 			name = Core;
 			sourceTree = "<group>";
@@ -483,8 +494,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				15B8A42A194CD28900CD578C /* Shader.vsh in Resources */,
+				15B8BE50195E68C400CE2AE6 /* PosColorShader.vsh in Resources */,
 				15B8A429194CD28900CD578C /* Shader.fsh in Resources */,
 				150CB1D11948E6B900636103 /* InfoPlist.strings in Resources */,
+				15B8BE4F195E68C400CE2AE6 /* PosColorShader.fsh in Resources */,
 				15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */,
 				150CB1D91948E6B900636103 /* Images.xcassets in Resources */,
 				157B96211958BEB3008599EC /* PAM.obj in Resources */,
@@ -514,6 +527,7 @@
 				150CB1D31948E6B900636103 /* main.m in Sources */,
 				15D4F0C01958F678001245FB /* BasePAMViewController.mm in Sources */,
 				15D4F0C21958F678001245FB /* PAMViewController.mm in Sources */,
+				15B8BE53195E715200CE2AE6 /* RAPoint.cpp in Sources */,
 				15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */,
 				150CB2221949019000636103 /* PAMManifold.mm in Sources */,
 				15B8A423194CD1D900CD578C /* RAES2VertexBuffer.cpp in Sources */,

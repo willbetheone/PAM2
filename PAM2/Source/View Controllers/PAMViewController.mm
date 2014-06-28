@@ -225,6 +225,11 @@ using namespace RAEngine;
         viewVolumeCenter = pamManifold->getModelMatrix() * Vec4f(bounds.center);
         
         boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
+        std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+        std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+        boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
+        boundingBox->bufferVertexDataToGPU();
+        boundingBox->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
     }
     
     [self setPaused:NO];
@@ -273,6 +278,11 @@ using namespace RAEngine;
     pamManifold->projectionMatrix = projectionMatrix;
     pamManifold->viewMatrix = viewMatrix;
     pamManifold->draw();
+    
+    boundingBox->projectionMatrix = projectionMatrix;
+    boundingBox->viewMatrix = viewMatrix;
+    boundingBox->draw();
+
 }
 
 @end
