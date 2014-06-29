@@ -15,7 +15,7 @@ namespace RAEngine {
     using namespace CGLA;
     using namespace std;
     
-    RABoundingBox::RABoundingBox() : RABoundingBox(Vec3f(0,0,0), Vec3f(1,1,1))
+    RABoundingBox::RABoundingBox() : RABoundingBox(Vec3f(-0.5,-0.5,-0.5), Vec3f(0.5,0.5,0.5))
     {
     };
 
@@ -26,7 +26,7 @@ namespace RAEngine {
         
         Vec3f mid = maxBound - minBound;
         radius = 0.5*mid.length();
-        center =  minBound + radius*normalize(maxBound);
+        center =  minBound + radius*normalize(mid);
         
         width = fabsf(maxBound[0] - minBound[0]);
         height = fabsf(maxBound[1] - minBound[1]);
@@ -44,7 +44,7 @@ namespace RAEngine {
                                       std::vector<unsigned int>*& indicies)
     {
         Vec4uc color(250,0,0,255);
-        vertexPositions = new Vec3f[8];
+        vertexPositions = new Vec3f[8]; 
         vertexColors = new Vec4uc[8];
         fill_n(vertexColors, 8, color);
 
@@ -90,7 +90,7 @@ namespace RAEngine {
         positionDataBuffer = new RAES2VertexBuffer(sizeof(Vec3f),
                                                    numVerticies,
                                                    vertexPositions,
-                                                   GL_DYNAMIC_DRAW,
+                                                   GL_STATIC_DRAW,
                                                    GL_ARRAY_BUFFER);
         positionDataBuffer->enableAttribute(attrib[ATTRIB_POSITION]);
         

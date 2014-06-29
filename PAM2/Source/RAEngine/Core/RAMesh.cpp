@@ -54,10 +54,8 @@ namespace RAEngine {
     
     Mat4x4 RAMesh::getModelMatrix() const
     {
-        Mat4x4 modelMatrix = identity_Mat4x4f();
-        modelMatrix = translationMatrix * modelMatrix ;
-        modelMatrix = rotationMatrix * modelMatrix  ;
-        //        modelMatrix = translationManager->getTranslationMatrix() * modelMatrix;
+        //TODO check the order!
+        Mat4x4 modelMatrix = translationMatrix*rotationMatrix*scaleMatrix;
         return modelMatrix;
     }
     
@@ -66,26 +64,35 @@ namespace RAEngine {
         return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
     }
     
-    void RAMesh::rotate(float radians, Vec3 axis)
-    {
-        Vec3f modelAxis = Vec3f(invert_ortho(getModelViewMatrix()) * Vec4f(axis, 0));
-        Mat4x4f rm = rotation_Mat4x4f(modelAxis, radians);
-        rotationMatrix = rotationMatrix * rm;
-    }
+//    void RAMesh::rotate(float radians, Vec3 axis)
+//    {
+//        Vec3f modelAxis = Vec3f(invert_ortho(getModelViewMatrix()) * Vec4f(axis, 0));
+//        Mat4x4f rm = rotation_Mat4x4f(modelAxis, radians);
+//        rotationMatrix = rm * rotationMatrix;
+//    }
     
-    void RAMesh::rotate(float radians, Vec3 axis, Vec3 toOriginVec)
+    void RAMesh::rotate(float radians, Vec3 axis, Vec3 toPivot)
     {
+        Mat4x4 toOrigin = translation_Mat4x4f(toPivot);
+        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toPivot);
+        Vec3f modelAxis = Vec3f(invert_ortho(getModelViewMatrix()) * Vec4f(axis, 0));
+        Mat4x4 rotMat = rotation_Mat4x4f(modelAxis, radians);
         
-        Mat4x4 toOrigin = translation_Mat4x4f(toOriginVec);
-        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toOriginVec);
-        Mat4x4 rotMat = rotation_Mat4x4f(axis, radians);
-        
-        rotationMatrix = rotationMatrix*fromOrigin * rotMat * toOrigin;
+        rotationMatrix = fromOrigin * rotMat * toOrigin * rotationMatrix;
     }
     
     void RAMesh::translate(Vec3 translation)
     {
-        translationMatrix =  translationMatrix * translation_Mat4x4f(translation);
+        translationMatrix =  translation_Mat4x4f(translation) * translationMatrix;
+    }
+    
+    void RAMesh::scale(Vec3 scale, Vec3 toPivot)
+    {
+        Mat4x4 toOrigin = translation_Mat4x4f(toPivot);
+        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toPivot);
+        Mat4x4 scaleMat = scaling_Mat4x4f(scale);
+        
+        scaleMatrix = fromOrigin * scaleMat * toOrigin * scaleMatrix;
     }
     
     int RAMesh::loadObjFile(const char* path)

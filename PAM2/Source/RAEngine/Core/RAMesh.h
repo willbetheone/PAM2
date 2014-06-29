@@ -47,14 +47,15 @@ namespace RAEngine
         Mat4x4 getModelMatrix() const;
         Mat3x3 getNormalMatrix() const;
         
-        Mat4x4 translationMatrix;
-        Mat4x4 rotationMatrix;
-        Mat4x4 scaleMatrix;
         
-        void rotate(float radians, Vec3 axis); //rotates around world origin
-        void rotate(float radians, Vec3 axis, Vec3 toOriginVec);
+//        void rotate(float radians, Vec3 axis); //rotates around world origin
+        void rotate(float radians, Vec3 axis, Vec3 toPivot);
         void translate(Vec3 translation);
+        void scale(Vec3 scale, Vec3 toPivot);
 
+        ///override in the child
+//        virtual void bufferVertexDataToGPU(bool deleteCPUdata);
+        
         ///override in the child
         virtual Bounds getBoundingBox() const = 0;
         
@@ -64,9 +65,16 @@ namespace RAEngine
         ///override in the child
         virtual void draw() const = 0;
         
+        ///override in the child
+//        virtual void drawWireframe() const = 0;
+
     private:
     
     protected:
+        
+        Mat4x4 translationMatrix;
+        Mat4x4 rotationMatrix;
+        Mat4x4 scaleMatrix;
         
         enum
         {
@@ -114,7 +122,6 @@ namespace RAEngine
         //Shaders
         RAES2ShaderProgram* drawShaderProgram;
         RAES2ShaderProgram* depthShaderProgram;
-        
     };
 }
 

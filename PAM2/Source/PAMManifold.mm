@@ -21,10 +21,6 @@ namespace PAMMesh
     using namespace CGLA;
     using namespace std;
     
-//    int VERTEX_SIZE =  3 * sizeof(float);
-//    int COLOR_SIZE =  4 * sizeof(unsigned char);
-//    int INDEX_SIZE  = sizeof(unsigned int);
-    
 #pragma mark - CONSTRUCTOR/DESTRUCTOR
     PAMManifold::PAMManifold() : HMesh::Manifold() {}
 
@@ -35,7 +31,6 @@ namespace PAMMesh
             RA_LOG_ERROR("Failed to load obj file %s", path);
             return 0;
         }
-
         return 1;
     }
     
@@ -47,7 +42,7 @@ namespace PAMMesh
         
         Vec3d mid = pmax - pmin;
         float radius = 0.5*mid.length();
-        Vec3d center =  pmin + radius*normalize(pmax);
+        Vec3d center =  pmin + radius*normalize(mid);
         
         Bounds bnds = {Vec3(pmin), Vec3(pmax), Vec3(center), radius};
         return bnds;

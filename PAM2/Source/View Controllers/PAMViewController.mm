@@ -14,6 +14,7 @@
 #include "RAZoomManager.h"
 #include "RATranslationManager.h"
 #include "RABoundingBox.h"
+#include "RAUnitSphere.h"
 
 using namespace CGLA;
 using namespace PAMMesh;
@@ -34,6 +35,7 @@ using namespace RAEngine;
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
+    RAUnitSphere* unitSphere;
     
     Bounds bounds;
     
@@ -229,7 +231,14 @@ using namespace RAEngine;
         std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
         boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
         boundingBox->bufferVertexDataToGPU();
-        boundingBox->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+        boundingBox->translate(viewVolumeCenter - bounds.center);
+        
+        unitSphere = new RAUnitSphere(viewVolumeCenter);
+        std::string vShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+        std::string fShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+        unitSphere->setupShaders(vShader_Cplus2, fShader_Cplus2);
+        unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
+        unitSphere->scale(Vec3(rad/2, rad/2, rad/2), Vec3(0,0,0));
     }
     
     [self setPaused:NO];
@@ -239,36 +248,17 @@ using namespace RAEngine;
 
 -(void)update
 {
-    float rad = bounds.radius;
-    float diam = rad * 2.0f;
-    Vec3f c = bounds.center;
-    GLfloat zNear = 1.0;
-    GLfloat zFar = zNear + diam;
-
-    GLfloat left = c[0] - rad;
-    GLfloat right = c[0] + rad;
-    GLfloat bottom = c[1] - rad;
-    GLfloat top = c[1] + rad;
-
+    float diam = bounds.radius * 2.0f;
     GLfloat aspect = (GLfloat)_glWidth / (GLfloat)_glHeight;
-
     float scale = 1.0f/zoomManager->getScaleFactor();
+    
+    GLfloat left = viewVolumeCenter[0] - diam*aspect*scale;
+    GLfloat right = viewVolumeCenter[0] + diam*aspect*scale;
+    GLfloat bottom = viewVolumeCenter[1] - diam*scale;
+    GLfloat top = viewVolumeCenter[1] + diam*scale;
 
-//    float scale = 1.0f;
-//    float bboxRadius = boundingBox.radius;
-//    projectionMatrix = ortho_Mat4x4f(-1*scale*bboxRadius,
-//                                      1*scale*bboxRadius,
-//                                     -1*aspectRatio*scale*bboxRadius,
-//                                      1*aspectRatio*scale*bboxRadius,
-//                                     -1*2*bboxRadius,
-//                                      1*2*bboxRadius);
-
-    projectionMatrix = ortho_Mat4x4f(left*scale*aspect, right*scale*aspect, bottom*scale, top*scale, zNear, zFar);
-
-    viewMatrix = identity_Mat4x4f();
-    viewMatrix = viewMatrix * translationManager->getTranslationMatrix();
-    viewMatrix = viewMatrix * rotManager->getRotationMatrix();
-
+    projectionMatrix = ortho_Mat4x4f(left, right, bottom, top, 1.0f, 1.0f + diam);
+    viewMatrix = translationManager->getTranslationMatrix() * rotManager->getRotationMatrix();
 }
 
 -(void)glkView:(GLKView *)view drawInRect:(CGRect)rect
@@ -282,7 +272,6 @@ using namespace RAEngine;
     boundingBox->projectionMatrix = projectionMatrix;
     boundingBox->viewMatrix = viewMatrix;
     boundingBox->draw();
-
 }
 
 @end
