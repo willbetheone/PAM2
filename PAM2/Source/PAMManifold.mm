@@ -66,6 +66,7 @@ namespace PAMMesh
         uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("uNormalMatrix");
     }
    
+    
     void PAMManifold::bufferVertexDataToGPU()
     {
         CGLA::Vec3f* vertexPositions;
@@ -198,6 +199,39 @@ namespace PAMMesh
         colorDataBuffer->bind();
         colorDataBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
 
+        indexDataBuffer->bind();
+        indexDataBuffer->drawPreparedArraysIndicies(GL_TRIANGLES, GL_UNSIGNED_INT, numIndicies);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        
+        glPopGroupMarkerEXT();
+    }
+    
+    void PAMManifold::drawToDepthBuffer() 
+    {
+        if (depthShaderProgram == nullptr) {
+            std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"DepthShader" ofType:@"vsh"].UTF8String);
+            std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"DepthShader" ofType:@"fsh"].UTF8String);
+            
+            depthShaderProgram = new RAES2ShaderProgram();
+            depthShaderProgram->loadProgram(vShader_Cplus, fShader_Cplus);
+            
+            attribDepth[ATTRIB_POSITION] = depthShaderProgram->getAttributeLocation("aPosition");
+            uniformsDepth[UNIFORM_MODELVIEWPROJECTION_MATRIX] = depthShaderProgram->getUniformLocation("uModelViewProjectionMatrix");
+        }
+        
+        Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
+        glPushGroupMarkerEXT(0, "Drawing PAM to Depth Buffer");
+        
+        glUseProgram(depthShaderProgram->getProgram());
+        GL_CHECK_ERROR;
+        glUniformMatrix4fv(uniformsDepth[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, mvpMat.get());
+        GL_CHECK_ERROR;
+        
+        positionDataBuffer->bind();
+        positionDataBuffer->prepareToDraw(attribDepth[ATTRIB_POSITION], 3, 0, GL_FLOAT, GL_FALSE);
+        
         indexDataBuffer->bind();
         indexDataBuffer->drawPreparedArraysIndicies(GL_TRIANGLES, GL_UNSIGNED_INT, numIndicies);
         

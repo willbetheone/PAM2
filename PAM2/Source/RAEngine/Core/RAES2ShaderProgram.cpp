@@ -21,6 +21,7 @@ namespace RAEngine
     map<string, int> RAES2ShaderProgram::shaderNameToCountMap{};
 
 #pragma mark - CONSTRUCTOR/DESTRUCTOR
+    
     RAES2ShaderProgram::~RAES2ShaderProgram()
     {
         map<string, int>::iterator it = shaderNameToCountMap.find(shaderNameKey);

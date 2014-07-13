@@ -8,7 +8,8 @@
 
 #import "AppDelegate.h"
 #include "Manifold.h"
-
+#include "PAMES2ViewController.h"
+#include "OssaPlates/OssaPlatesViewController.h"
 
 @implementation AppDelegate
 
@@ -16,7 +17,7 @@
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     // Override point for customization after application launch.
-    self.pamViewController = [[PAMViewController alloc] init];
+    self.pamViewController = [[OssaPlatesViewController alloc] init];
     [self.window setRootViewController:self.pamViewController];
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];

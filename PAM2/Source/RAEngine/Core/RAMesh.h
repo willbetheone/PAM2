@@ -13,9 +13,12 @@
 #import <OpenGLES/ES2/gl.h>
 #include "Mat4x4f.h"
 #include "Mat3x3f.h"
+#include "Vec4uc.h"
 #include "RAES2VertexBuffer.h"
 #include "RAES2ShaderProgram.h"
 #include "RAES2VertexArray.h"
+#include <OpenGLES/ES2/glext.h>
+#include "RALogManager.h"
 
 namespace RAEngine
 {
@@ -64,6 +67,9 @@ namespace RAEngine
         
         ///override in the child
         virtual void draw() const = 0;
+        
+        ///override in the child
+//        virtual void drawToDepthBuffer();
         
         ///override in the child
 //        virtual void drawWireframe() const = 0;
@@ -121,7 +127,7 @@ namespace RAEngine
         
         //Shaders
         RAES2ShaderProgram* drawShaderProgram;
-        RAES2ShaderProgram* depthShaderProgram;
+        RAES2ShaderProgram* depthShaderProgram = nullptr;
     };
 }
 

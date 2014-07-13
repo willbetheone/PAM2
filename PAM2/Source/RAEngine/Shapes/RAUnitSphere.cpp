@@ -122,4 +122,9 @@ namespace RAEngine
     {
         return {};
     }
+    
+    void RAUnitSphere::resetTranslation()
+    {
+        translationMatrix = identity_Mat4x4f();
+    }
 }

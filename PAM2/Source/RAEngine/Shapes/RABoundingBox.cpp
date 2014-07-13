@@ -7,8 +7,6 @@
 //
 
 #include "RABoundingBox.h"
-#include <OpenGLES/ES2/glext.h>
-#include "RALogManager.h"
 
 namespace RAEngine {
     
@@ -132,7 +130,7 @@ namespace RAEngine {
         colorDataBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
         
         indexDataBuffer->bind();
-        indexDataBuffer->drawPreparedArraysIndicies(GL_LINES, GL_UNSIGNED_INT, numIndicies);
+        RAES2VertexBuffer::drawPreparedArraysIndicies(GL_LINES, GL_UNSIGNED_INT, numIndicies);
         
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

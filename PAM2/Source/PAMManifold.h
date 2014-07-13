@@ -35,6 +35,7 @@ namespace PAMMesh {
                            std::vector<unsigned int>*& indicies) const;
         
         void draw() const override;
+        void drawToDepthBuffer();
         
         int loadObjFile(const char* path) override;
 

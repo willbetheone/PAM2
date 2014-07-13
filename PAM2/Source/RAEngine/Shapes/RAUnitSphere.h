@@ -21,6 +21,8 @@ namespace RAEngine {
 
         void setupShaders(const std::string vertexShader, const std::string fragmentShader);
 //        void bufferVertexDataToGPU(bool deleteCPUdata);
+        
+        void resetTranslation   ();
         int  loadObjFile(const char* path) override;
         Bounds getBoundingBox() const override;
         void draw() const;

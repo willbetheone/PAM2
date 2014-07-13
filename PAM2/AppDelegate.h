@@ -7,11 +7,9 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "PAMViewController.h"
-
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 
 @property (strong, nonatomic) UIWindow *window;
-@property (strong, nonatomic) PAMViewController* pamViewController;
+@property (strong, nonatomic) UIViewController* pamViewController;
 
 @end
