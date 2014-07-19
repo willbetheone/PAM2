@@ -18,15 +18,18 @@ namespace RAEngine {
     public:
         RAUnitSphere();
         RAUnitSphere(const CGLA::Vec3f& point);
+        
+        void setCenter(const CGLA::Vec3f& point);
 
         void setupShaders(const std::string vertexShader, const std::string fragmentShader);
 //        void bufferVertexDataToGPU(bool deleteCPUdata);
         
-        void resetTranslation   ();
+        void resetTranslation();
         int  loadObjFile(const char* path) override;
         Bounds getBoundingBox() const override;
         void draw() const;
     private:
+        Vec3 center;
     };
 }
 

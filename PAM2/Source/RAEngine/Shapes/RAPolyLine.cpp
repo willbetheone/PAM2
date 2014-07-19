@@ -37,6 +37,11 @@ namespace RAEngine
         
         Vec4uc* vertexColors = new Vec4uc[points.size()];
         fill_n(vertexColors, points.size(), color);
+        for (int i = 0; i < points.size(); i++) {
+            if (i%2 == 0) {
+                vertexColors[i] = Vec4uc(0,0,0,255);
+            }
+        }
         
         colorDataBuffer = new RAES2VertexBuffer(sizeof(Vec4uc),
                                                 numVerticies,

@@ -7,7 +7,6 @@
 //
 
 #include "RARotationManager.h"
-#import "Quatf.h"
 
 namespace RAEngine
 {

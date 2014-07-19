@@ -1,55 +1,54 @@
 //
-//  RAUnitSphere.cpp
+//  RAPlateSegment.cpp
 //  PAM2
 //
-//  Created by Rinat Abdrashitov on 2014-06-28.
+//  Created by Rinat Abdrashitov on 2014-07-14.
 //  Copyright (c) 2014 Rinat Abdrashitov. All rights reserved.
 //
 
-#include "RAUnitSphere.h"
+#include "PlateSegment.h"
+#include "Quatf.h"
 #include "../HMesh/obj_load.h"
-#include "Vec4uc.h"
-#include <OpenGLES/ES2/glext.h>
-#include <OpenGLES/ES2/gl.h>
-#include "RALogManager.h"
 
-namespace RAEngine
+namespace Ossa
 {
     using namespace CGLA;
     using namespace std;
+    using namespace RAEngine;
     
-    RAUnitSphere::RAUnitSphere() : RAUnitSphere(Vec3f(0,0,0))
+    PlateSegment::PlateSegment(const Vec3&  center, const Vec3& norm)
     {
+        Quatf quat;
+        quat.make_rot(Vec3f(0,1,0), norm);
+        quat.get_Mat4x4f();
+        rotate(quat.get_Mat4x4f());
+        translate(center);
     }
     
-    
-    RAUnitSphere::RAUnitSphere(const CGLA::Vec3f& point)
-    {
-        translate(point);
-        center = point;
-    }
-    
-    void RAUnitSphere::setCenter(const CGLA::Vec3f& point)
+    void PlateSegment::setCenterAndNormal(const CGLA::Vec3f& center, const CGLA::Vec3f& norm)
     {
         translationMatrix = identity_Mat4x4f();
-        translate(point);
-        center = point;
-    }    
+        rotationMatrix = identity_Mat4x4f();
+        Quatf quat;
+        quat.make_rot(Vec3f(0,1,0), norm);
+        quat.get_Mat4x4f();
+        rotate(quat.get_Mat4x4f());
+        translate(center);
+    }
     
-    void RAUnitSphere::setupShaders(const std::string vertexShader, const std::string fragmentShader)
+    void PlateSegment::setupShaders(const std::string vertexShader, const std::string fragmentShader)
     {
+        
         drawShaderProgram = new RAES2ShaderProgram();
         drawShaderProgram->loadProgram(vertexShader, fragmentShader);
         
         attrib[ATTRIB_POSITION] = drawShaderProgram->getAttributeLocation("aPosition");
-//        attrib[ATTRIB_NORMAL] = drawShaderProgram->getAttributeLocation("aNormal");
         attrib[ATTRIB_COLOR] = drawShaderProgram->getAttributeLocation("aColor");
         
         uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX] = drawShaderProgram->getUniformLocation("uModelViewProjectionMatrix");
-//        uniforms[UNIFORM_NORMAL_MATRIX] = drawShaderProgram->getUniformLocation("uNormalMatrix");
     }
-
-    int RAUnitSphere::loadObjFile(const char* path)
+    
+    int PlateSegment::loadObjFile(const char* path)
     {
         vector<Vec3f> vertices{};
         vector<Vec3f> normals{};
@@ -58,7 +57,7 @@ namespace RAEngine
         
         HMesh::obj_load(path, vertices, normals, faces, indices);
         Vec4uc* colors = new Vec4uc[vertices.size()];
-        std::fill_n(colors, vertices.size(), Vec4uc(255,0,0,255));
+        std::fill_n(colors, vertices.size(), Vec4uc(0,0,255,255));
         
         numVerticies = vertices.size();
         positionDataBuffer = new RAES2VertexBuffer(sizeof(Vec3f),
@@ -67,13 +66,6 @@ namespace RAEngine
                                                    GL_STATIC_DRAW,
                                                    GL_ARRAY_BUFFER);
         positionDataBuffer->enableAttribute(attrib[ATTRIB_POSITION]);
-        
-//        normalDataBuffer = new RAES2VertexBuffer(sizeof(Vec3f),
-//                                                 numVerticies,
-//                                                 normals.data(),
-//                                                 GL_STATIC_DRAW,
-//                                                 GL_ARRAY_BUFFER);
-//        normalDataBuffer->enableAttribute(attrib[ATTRIB_NORMAL]);
         
         colorDataBuffer = new RAES2VertexBuffer(sizeof(Vec4uc),
                                                 numVerticies,
@@ -93,11 +85,10 @@ namespace RAEngine
         return 1;
     }
     
-    
-    void RAUnitSphere::draw() const
+    void PlateSegment::draw() const
     {
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
-//        Mat3x3 normal = transpose(getNormalMatrix());
+        //        Mat3x3 normal = transpose(getNormalMatrix());
         
         glPushGroupMarkerEXT(0, "Drawing Unit Sphere");
         
@@ -105,15 +96,15 @@ namespace RAEngine
         GL_CHECK_ERROR;
         glUniformMatrix4fv(uniforms[UNIFORM_MODELVIEWPROJECTION_MATRIX], 1, 0, mvpMat.get());
         GL_CHECK_ERROR;
-//        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, normal.get());
-//        GL_CHECK_ERROR;
+        //        glUniformMatrix3fv(uniforms[UNIFORM_NORMAL_MATRIX], 1, 0, normal.get());
+        //        GL_CHECK_ERROR;
         
         positionDataBuffer->bind();
         positionDataBuffer->prepareToDraw(attrib[ATTRIB_POSITION], 3, 0, GL_FLOAT, GL_FALSE);
         
-//        normalDataBuffer->bind();
-//        normalDataBuffer->prepareToDraw(attrib[ATTRIB_NORMAL], 3, 0, GL_FLOAT, GL_FALSE);
-
+        //        normalDataBuffer->bind();
+        //        normalDataBuffer->prepareToDraw(attrib[ATTRIB_NORMAL], 3, 0, GL_FLOAT, GL_FALSE);
+        
         colorDataBuffer->bind();
         colorDataBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
         
@@ -126,17 +117,13 @@ namespace RAEngine
         glPopGroupMarkerEXT();
     }
     
-    Bounds RAUnitSphere::getBoundingBox() const
+    Bounds PlateSegment::getBoundingBox() const
     {
-        Bounds bounds;
-        bounds.minBound = Vec3(getModelMatrix() * Vec4f(-1,-1,-1,1));
-        bounds.maxBound = Vec3(getModelMatrix() * Vec4f(1,1,1,1));
-        bounds.center = Vec3(getModelMatrix() * Vec4f(0,0,0,1));
-        bounds.radius = (bounds.minBound - bounds.center).length();
+        Bounds bounds{};
         return bounds;
     }
-    
-    void RAUnitSphere::resetTranslation()
+
+    void PlateSegment::resetTranslation()
     {
         translationMatrix = identity_Mat4x4f();
     }

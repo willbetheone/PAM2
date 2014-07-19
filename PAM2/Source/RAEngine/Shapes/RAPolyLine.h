@@ -21,6 +21,7 @@ namespace RAEngine
         void bufferVertexDataToGPU(std::vector<CGLA::Vec3f> points, CGLA::Vec4uc color);
         Bounds getBoundingBox() const override;
         void draw() const override;
+        int linetype = GL_LINE_STRIP;
     private:
         bool readyToDraw = false;
     };

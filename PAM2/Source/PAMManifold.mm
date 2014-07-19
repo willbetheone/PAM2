@@ -13,6 +13,8 @@
 #include <GLKit/GLKMath.h>
 #include <limits.h>
 #include "../HMesh/obj_load.h"
+#include <map>
+
 
 namespace PAMMesh
 {
@@ -20,9 +22,14 @@ namespace PAMMesh
     using namespace RAEngine;
     using namespace CGLA;
     using namespace std;
+    using namespace Geometry;
     
 #pragma mark - CONSTRUCTOR/DESTRUCTOR
     PAMManifold::PAMManifold() : HMesh::Manifold() {}
+    PAMManifold::~PAMManifold()
+    {
+        delete kdTree;
+    }
 
 #pragma mark - INHERITED VIRTUAL FUNCTTIONS
     int PAMManifold::loadObjFile(const char *path)
@@ -69,9 +76,9 @@ namespace PAMMesh
     
     void PAMManifold::bufferVertexDataToGPU()
     {
-        CGLA::Vec3f* vertexPositions;
-        CGLA::Vec3f* vertexNormals;
-        CGLA::Vec4uc* vertexColors;
+        Vec3f* vertexPositions;
+        Vec3f* vertexNormals;
+        Vec4uc* vertexColors;
         std::vector<unsigned int>* indicies;
         getVertexData(vertexPositions, vertexNormals, vertexColors, indicies);
 
@@ -136,19 +143,23 @@ namespace PAMMesh
                                     std::vector<unsigned int>*& indicies) const
     {
         Vec4uc color(200,200,200,255);
-
+        
         vertexPositions = new Vec3f[no_vertices()];
         vertexNormals = new Vec3f[no_vertices()];
         vertexColors = new Vec4uc[no_vertices()];
         indicies = new vector<unsigned int>();
         
+        // when interating through faces we need to map VertexID to index
+        std::map<VertexID, int>* vertexIDtoIndex = new std::map<VertexID, int>();
+        
         int i = 0;
         for (VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid, ++i) {
-            assert((*vid).index < no_vertices());
+//            assert((*vid).index < no_vertices());
             
             vertexPositions[i] = posf(*vid);
             vertexNormals[i] = HMesh::normalf(*this, *vid);
             vertexColors[i] = color;
+            (*vertexIDtoIndex)[*vid] = i;
         }
         
         for (FaceIDIterator fid = faces_begin(); fid != faces_end(); ++fid) {
@@ -159,10 +170,9 @@ namespace PAMMesh
             for (Walker w = walker(*fid); !w.full_circle(); w = w.circulate_face_ccw()) {
                 //add vertex to the data array
                 VertexID vID = w.vertex();
-                unsigned int index = vID.index;
-                
+//                unsigned int index = vID.index;
+                unsigned int index = (*vertexIDtoIndex)[vID];
                 assert(index < no_vertices());
-                
                 facet[vertexNum] = index;
                 vertexNum++;
                 
@@ -174,6 +184,60 @@ namespace PAMMesh
                 indicies->push_back(index);
             }
         }
+        delete vertexIDtoIndex;
+
+    }
+    
+    bool PAMManifold::normal(const CGLA::Vec3f& point, CGLA::Vec3f& norm)
+    {
+        VertexID vid;
+        if (closestVertexID_3D(point, vid)){
+            norm = normalf(*this, vid);
+            return true;
+        }
+        return false;
+    }
+    
+    bool PAMManifold::closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
+    {
+        if (kdTree != nullptr) {
+            Vec3f coord;
+            Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
+            float max = 0.1;
+            if (kdTree->closest_point(pointModel, max, coord, vid)){
+                return true;
+            }
+            return false;
+        } else {
+            //iterate over every face
+            float distance = FLT_MAX;
+            HMesh::VertexID closestVertex;
+            Vec3f pointModel = Vec3f(invert_affine(getModelMatrix()) * Vec4f(point));
+            
+            if (no_vertices()==0) {
+                return false;
+            }
+
+            for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
+            {
+                Vec3f vertexPos = posf(*vID);
+                float cur_distance = (pointModel - vertexPos).length();
+                if (cur_distance < distance) {
+                    distance = cur_distance;
+                    vid = *vID;
+                }
+            }
+            return true;
+        }
+    }
+    
+    void PAMManifold::buildKDTree()
+    {
+        kdTree = new KDTree<Vec3f, VertexID>();
+        for(VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid) {
+            kdTree->insert(posf(*vid), *vid);
+        }
+        kdTree->build();
     }
     
     void PAMManifold::draw() const

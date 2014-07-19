@@ -13,15 +13,16 @@
 #include "Manifold.h"
 #include "Vec4uc.h"
 #include "RAMesh.h"
+#include "KDTree.h"
+
 
 namespace PAMMesh {
     
     class PAMManifold : public HMesh::Manifold, public RAEngine::RAMesh
     {
-        
     public:
-        
         PAMManifold();
+        ~PAMManifold();
 
         void setupShaders();
         
@@ -29,18 +30,29 @@ namespace PAMMesh {
         
         void normalizeVertexCoordinates();
         
-        void getVertexData(CGLA::Vec3f*& vertexPositions,
-                           CGLA::Vec3f*& vertexNormals,
-                           CGLA::Vec4uc*& vertexColors,
-                           std::vector<unsigned int>*& indicies) const;
-        
         void draw() const override;
         void drawToDepthBuffer();
         
         int loadObjFile(const char* path) override;
+        int loadPAMObjFile(const char* path);
 
         ///calculation intensive, not caching
         RAEngine::Bounds getBoundingBox() const override;
+        
+        ///get normal of the closest vertex to point
+        bool normal(const CGLA::Vec3f& point, CGLA::Vec3f& norm);
+        
+        ///add kd tree support
+        void buildKDTree();
+    private:
+        Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree = nullptr;
+        
+        bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
+
+        void getVertexData(CGLA::Vec3f*& vertexPositions,
+                           CGLA::Vec3f*& vertexNormals,
+                           CGLA::Vec4uc*& vertexColors,
+                           std::vector<unsigned int>*& indicies) const;
     };
 }
 

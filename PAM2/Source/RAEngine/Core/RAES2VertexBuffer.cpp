@@ -109,7 +109,7 @@ namespace RAEngine {
         {
             glDeleteBuffers(1, &name); // Step 7
             GL_CHECK_ERROR;
-            name = 0;
+//            name = 0;
         }
     }    
 

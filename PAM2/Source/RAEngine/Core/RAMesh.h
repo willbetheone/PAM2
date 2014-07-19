@@ -13,6 +13,7 @@
 #import <OpenGLES/ES2/gl.h>
 #include "Mat4x4f.h"
 #include "Mat3x3f.h"
+#include "Vec2f.h"
 #include "Vec4uc.h"
 #include "RAES2VertexBuffer.h"
 #include "RAES2ShaderProgram.h"
@@ -25,6 +26,7 @@ namespace RAEngine
     typedef CGLA::Mat4x4f Mat4x4;
     typedef CGLA::Mat3x3f Mat3x3;
     typedef CGLA::Vec3f Vec3;
+    typedef CGLA::Vec2f Vec2;
     
     struct Bounds {
         Vec3 minBound;
@@ -38,7 +40,7 @@ namespace RAEngine
     public:
         RAMesh();
         ~RAMesh();
-
+        
         Mat4x4 viewMatrix;
         Mat4x4 projectionMatrix;
 
@@ -50,9 +52,9 @@ namespace RAEngine
         Mat4x4 getModelMatrix() const;
         Mat3x3 getNormalMatrix() const;
         
-        
 //        void rotate(float radians, Vec3 axis); //rotates around world origin
         void rotate(float radians, Vec3 axis, Vec3 toPivot);
+        void rotate(Mat4x4 mat);
         void translate(Vec3 translation);
         void scale(Vec3 scale, Vec3 toPivot);
 
@@ -73,9 +75,21 @@ namespace RAEngine
         
         ///override in the child
 //        virtual void drawWireframe() const = 0;
+        
+        // Test for intersection of linear component and bound (points of
+        // intersection not computed).  The linear component is parameterized by
+        // P + t*D, where P is a point on the component (the origin) and D is a
+        // unit-length direction vector.  The interval [tmin,tmax] is
+        //   line:     tmin = -Mathf::MAX_REAL, tmax = Mathf::MAX_REAL
+        //   ray:      tmin = 0.0f, tmax = Mathf::MAX_REAL
+        //   segment:  tmin >= 0.0f, tmax > tmin
+        virtual bool testBoundingBoxIntersection(const Vec3& origin, const Vec3& direction,
+                                                 float tmin, float tmax) const;
+
 
     private:
-    
+        Vec3* positions;
+        Vec3* normals;
     protected:
         
         Mat4x4 translationMatrix;
@@ -114,19 +128,19 @@ namespace RAEngine
         GLint uniformsDepth[NUM_UNIFORMS];
         
         //Indexed vertex data
-        RAES2VertexBuffer* positionDataBuffer;
-        RAES2VertexBuffer* normalDataBuffer;
-        RAES2VertexBuffer* colorDataBuffer;
-        RAES2VertexBuffer* indexDataBuffer;
+        RAES2VertexBuffer* positionDataBuffer = nullptr;
+        RAES2VertexBuffer* normalDataBuffer = nullptr;
+        RAES2VertexBuffer* colorDataBuffer = nullptr;
+        RAES2VertexBuffer* indexDataBuffer = nullptr;
         
         //Interlieved vertex data
-        RAES2VertexBuffer* vertexDataBuffer;
+        RAES2VertexBuffer* vertexDataBuffer = nullptr;
         
         //Vertex array
-        RAES2VertexArray* vertexArray;
+        RAES2VertexArray* vertexArray = nullptr;
         
         //Shaders
-        RAES2ShaderProgram* drawShaderProgram;
+        RAES2ShaderProgram* drawShaderProgram = nullptr;
         RAES2ShaderProgram* depthShaderProgram = nullptr;
     };
 }

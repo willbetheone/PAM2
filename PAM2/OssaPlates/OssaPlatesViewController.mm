@@ -18,18 +18,19 @@
 #include "RAUnitSphere.h"
 #include "RAES2OffScreenBuffer.h"
 #include "glu.h"
-#include "PolylineUtilities.h"
+#include "RAPolylineUtilities.h"
 #include "RAPolyLine.h"
-#include "Wm5BSplineCurveFit.h"
-#include "Wm5BSplineCurve3.h"
+#include "SegmentSpline.h"
+#include "Plate.h"
 
 using namespace std;
 using namespace CGLA;
 using namespace PAMMesh;
 using namespace RAEngine;
-using namespace Wm5;
+using namespace Ossa;
 
-@interface OssaPlatesViewController () {
+@interface OssaPlatesViewController ()
+{
     //offscreen color and depth buffer
     RAES2OffScreenBuffer* offScreenBuffer;
     
@@ -39,23 +40,29 @@ using namespace Wm5;
     PAMManifold* pamManifold;
     RABoundingBox* boundingBox;
     Bounds bounds;
+    Vec3f viewVolumeCenter;
     
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
     
-//    RAUnitSphere* unitSphere;
-    Vec3f viewVolumeCenter;
-    
     UIButton* drawLine;
     BOOL drawLineMode;
+    
     vector<Vec3f> polyline;
-    RAPolyLine* polylineMesh;
-    RAPolyLine* polylineMeshRecuded;
+    RAPolyLine* userDrawnCurve;
+    RAPolyLine* userDrawnCurveTesselated;
+    RAPolyLine* plateSpline;
+    
     GLubyte* tempDepthBuffer;
     vector<RAUnitSphere*> unitSpheres;
-    
-    BSplineCurve3<float>* bspline;
+    Plate* plate;
+
+    SegmentSpline* segSpline;
+    RAUnitSphere* movedUnitSphere;
+    int movedUnitSphereIndex;
+    std::string vShader_Cplus;
+    std::string fShader_Cplus;
 }
 @end
 
@@ -78,7 +85,6 @@ using namespace Wm5;
 {
     [super viewDidLoad];
     [self setupGL];
-    [self loadMeshData];
     [self addGestureRecognizersToView:self.view];
     
     drawLine = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -89,16 +95,22 @@ using namespace Wm5;
     [self.view addSubview:drawLine];
     
     drawLineMode = NO;
-    polylineMesh = new RAPolyLine();
-    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-    polylineMesh->setupShaders(vShader_Cplus, fShader_Cplus);
+    vShader_Cplus = std::string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+    fShader_Cplus = std::string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+
+    userDrawnCurve = new RAPolyLine();
+    userDrawnCurve->setupShaders(vShader_Cplus, fShader_Cplus);
     
-    polylineMeshRecuded = new RAPolyLine();
-    polylineMeshRecuded->setupShaders(vShader_Cplus, fShader_Cplus);
+    userDrawnCurveTesselated = new RAPolyLine();
+    userDrawnCurveTesselated->setupShaders(vShader_Cplus, fShader_Cplus);
+    
+    plateSpline = new RAPolyLine();
+    plateSpline->setupShaders(vShader_Cplus, fShader_Cplus);
     
     unitSpheres = vector<RAUnitSphere*>();
-
+    plate = nullptr;
+    
+    [self loadMeshData];
 }
 
 - (void)viewDidUnload
@@ -111,7 +123,6 @@ using namespace Wm5;
     delete rotManager;
     delete zoomManager;
     delete translationManager;
-//    delete unitSphere;
     
     ((GLKView *)self.view).context = nil;
     [EAGLContext setCurrentContext:nil];
@@ -128,6 +139,7 @@ using namespace Wm5;
 {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
@@ -182,68 +194,253 @@ using namespace Wm5;
 {
     Vec3f toucP{};
     [self modelCoordinates:toucP forGesture:sender];
-//    unitSphere->resetTranslation();
-//    unitSphere->translate(toucP);
 }
 
 -(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
+    if (drawLineMode)
+    {
+        [self handlePlateCreation:sender];
+    }
+    else
+    {
+        [self handleControlPointMovement:sender];
+    }
+}
+
+-(void)handleControlPointMovement:(UIGestureRecognizer*) sender {
     CGPoint cocoaTouch = [sender locationInView:sender.view];
     GestureState state = [self gestureStateForRecognizer:sender];
-
-    if (drawLineMode) {
-        CGPoint glTouch = [self scaleTouchPoint:cocoaTouch inView:(GLKView*)self.view];
-        if (state == GestureState::Began) {
-            polyline.clear();
-            tempDepthBuffer = [self renderToOffscreenDepthBuffer:pamManifold];
-        } else if (state == GestureState::Changed) {
-            Vec3f modelCoord{};
-            if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer] )
-            {
-                polyline.push_back(modelCoord);
-                polylineMesh->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+    
+    if (sender.state == UIGestureRecognizerStateBegan ) {
+        Vec3f rayOrigin, rayDirection;
+        [self rayOrigin:rayOrigin rayDirection:rayDirection forGesture:sender];
+        movedUnitSphere = nullptr;
+        int i = 0;
+        for (RAUnitSphere* uSphere : unitSpheres) {
+            if (uSphere->testBoundingBoxIntersection(rayOrigin, rayDirection, 0, FLT_MAX)) {
+                RA_LOG_INFO("hit uSpher");
+                movedUnitSphere = uSphere;
+                movedUnitSphereIndex = i;
+                tempDepthBuffer = [self renderToOffscreenDepthBuffer:pamManifold];
+                return;
+            }
+            i++;
+        }
+    } else if (sender.state == UIGestureRecognizerStateChanged) {
+        if (movedUnitSphere != nullptr) {
+            Vec3f modelCoord;
+            CGPoint glTouch = [self scaleTouchPoint:cocoaTouch inView:(GLKView*)self.view];
+            
+            if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
+                movedUnitSphere->setCenter(modelCoord);
+                segSpline->setControlPoint(movedUnitSphereIndex, modelCoord);
+                vector<Vec3f> splineData;
+                segSpline->getSpline(splineData);
+                
+                vector<Vec3f> centerSplineData;
+                vector<Vec3f> normSplineData;
+                vector<Vec3f> tangentSplineData;
+                centers(centerSplineData, splineData);
+                tangents(tangentSplineData, splineData);
+                assert(centerSplineData.size() == tangentSplineData.size());
+                
+                for (Vec3f point : centerSplineData) {
+                    Vec3f norm;
+                    if (pamManifold->normal(point, norm)) {
+                        normSplineData.push_back(normalize(norm));
+                    } else {
+                        RA_LOG_WARN("couldnt find norm vector");
+                        return;
+                    }
+                }
+                
+                plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
             } else {
                 RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
             }
-        } else if (state == GestureState::Ended) {
-//            vector<Vec3f> reduced = reduceLineToEqualSegments(polyline, 0.1f);
-//            
-            std::string vShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-            std::string fShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-//
-            unitSpheres.clear();
-//            for (Vec3f center : reduced) {
-//                RAUnitSphere* unitSphere = new RAUnitSphere(center);
-//                unitSphere->setupShaders(vShader_Cplus2, fShader_Cplus2);
-//                unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
-//                unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
-//                unitSpheres.push_back(unitSphere);
-//            }
-            vector<Vec3f> reducedPosition = reduceLineToEqualSegments(polyline, 0.1f);
-            BSplineCurveFit<float> fittedBspline = BSplineCurveFit<float>(3, reducedPosition.size(), (const float*)reducedPosition.data(), 3, reducedPosition.size()/2);
-            bspline =  new BSplineCurve3<float>(fittedBspline.GetControlQuantity(),
-                                                                 (const Vector3<float>*)fittedBspline.GetControlData(),
-                                                                 3,
-                                                                 false,
-                                                                 true);
-            
-            for (int i = 0; i < bspline->GetNumCtrlPoints(); i++ )
-            {
-                Vector3f ctrPnt = bspline->GetControlPoint(i);
-                RAUnitSphere* unitSphere = new RAUnitSphere(Vec3f(ctrPnt[0],ctrPnt[1],ctrPnt[2]));
-                unitSphere->setupShaders(vShader_Cplus2, fShader_Cplus2);
-                unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
-                unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
-                unitSpheres.push_back(unitSphere);
-            }
-            
-
-            delete tempDepthBuffer;
+            return;
         }
     } else {
-        Vec2i glTouch = Vec2i(cocoaTouch.x, [sender.view bounds].size.height - cocoaTouch.y);
-        rotManager->handlePanGesture(state, glTouch, viewVolumeCenter);
+        if (movedUnitSphere != nullptr) {
+            movedUnitSphere = nullptr;
+            delete tempDepthBuffer;
+            return;
+        }
     }
+    
+    Vec2i glTouch = Vec2i(cocoaTouch.x, [sender.view bounds].size.height - cocoaTouch.y);
+    rotManager->handlePanGesture(state, glTouch, viewVolumeCenter);
+}
+
+-(void)handlePlateCreation:(UIGestureRecognizer*) sender
+{
+    CGPoint cocoaTouch = [sender locationInView:sender.view];
+    GestureState state = [self gestureStateForRecognizer:sender];
+    CGPoint glTouch = [self scaleTouchPoint:cocoaTouch inView:(GLKView*)self.view];
+    
+    if (state == GestureState::Began)
+    {
+        polyline.clear();
+        tempDepthBuffer = [self renderToOffscreenDepthBuffer:pamManifold];
+    }
+    else if (state == GestureState::Changed)
+    {
+        Vec3f modelCoord;
+        if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
+            polyline.push_back(modelCoord);
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+        } else {
+            RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
+        }
+    }
+    else if (state == GestureState::Ended)
+    {
+        clearVector(unitSpheres);
+        delete segSpline;
+        
+        segSpline =  new SegmentSpline(polyline, 0.1f);
+        vector<Vec3f> splineControlPoints;
+        vector<Vec3f> splineData;
+        segSpline->getControlPoints(splineControlPoints);
+        segSpline->getSpline(splineData);
+        userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
+        plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
+        
+        vector<Vec3f> centerSplineData;
+        vector<Vec3f> normSplineData;
+        vector<Vec3f> tangentSplineData;
+        centers(centerSplineData, splineData);
+        tangents(tangentSplineData, splineData);
+        assert(centerSplineData.size() == tangentSplineData.size());
+        
+        for (Vec3f point : centerSplineData) {
+            
+            Vec3f norm;
+            if (pamManifold->normal(point, norm)) {
+                normSplineData.push_back(normalize(norm));
+            } else {
+                RA_LOG_WARN("couldnt find norm vector");
+                return;
+            }
+        }
+        
+        plate = new Plate();
+        plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
+        plate->setupShaders(vShader_Cplus, fShader_Cplus);
+        plate->loadObjFile([[NSBundle mainBundle] pathForResource:@"roundsegment" ofType:@"obj"].UTF8String);
+        plate->scale = 0.1f/2.0;
+        
+        for (int i = 0; i < segSpline->getControlQuantity(); i++)
+        {
+            Vec3f ctrPnt = segSpline->getControlPoint(i);
+            RAUnitSphere* unitSphere = new RAUnitSphere(Vec3f(ctrPnt[0],ctrPnt[1],ctrPnt[2]));
+            unitSphere->setupShaders(vShader_Cplus, fShader_Cplus);
+            unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
+            unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
+            unitSpheres.push_back(unitSphere);
+        }
+
+        delete tempDepthBuffer;
+    }
+}
+
+-(void)extenedPlate {
+    clearVector(unitSpheres);
+    delete segSpline;
+    
+    segSpline =  new SegmentSpline(polyline, 0.1f);
+    vector<Vec3f> splineControlPoints;
+    vector<Vec3f> splineData;
+    segSpline->getControlPoints(splineControlPoints);
+    segSpline->getSpline(splineData);
+    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
+    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
+    
+    vector<Vec3f> centerSplineData;
+    vector<Vec3f> normSplineData;
+    vector<Vec3f> tangentSplineData;
+    centers(centerSplineData, splineData);
+    tangents(tangentSplineData, splineData);
+    assert(centerSplineData.size() == tangentSplineData.size());
+    
+    for (Vec3f point : centerSplineData) {
+        
+        Vec3f norm;
+        if (pamManifold->normal(point, norm)) {
+            normSplineData.push_back(normalize(norm));
+        } else {
+            RA_LOG_WARN("couldnt find norm vector");
+            return;
+        }
+    }
+    
+    plate = new Plate();
+    plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
+    plate->setupShaders(vShader_Cplus, fShader_Cplus);
+    plate->loadObjFile([[NSBundle mainBundle] pathForResource:@"roundsegment" ofType:@"obj"].UTF8String);
+    plate->scale = 0.1f/2.0;
+    
+    for (int i = 0; i < segSpline->getControlQuantity(); i++)
+    {
+        Vec3f ctrPnt = segSpline->getControlPoint(i);
+        RAUnitSphere* unitSphere = new RAUnitSphere(Vec3f(ctrPnt[0],ctrPnt[1],ctrPnt[2]));
+        unitSphere->setupShaders(vShader_Cplus, fShader_Cplus);
+        unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
+        unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
+        unitSpheres.push_back(unitSphere);
+    }
+    
+    delete tempDepthBuffer;
+}
+
+-(void)createNewPlate {
+    clearVector(unitSpheres);
+    delete segSpline;
+    
+    segSpline =  new SegmentSpline(polyline, 0.1f);
+    vector<Vec3f> splineControlPoints;
+    vector<Vec3f> splineData;
+    segSpline->getControlPoints(splineControlPoints);
+    segSpline->getSpline(splineData);
+    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
+    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
+    
+    vector<Vec3f> centerSplineData;
+    vector<Vec3f> normSplineData;
+    vector<Vec3f> tangentSplineData;
+    centers(centerSplineData, splineData);
+    tangents(tangentSplineData, splineData);
+    assert(centerSplineData.size() == tangentSplineData.size());
+    
+    for (Vec3f point : centerSplineData) {
+        
+        Vec3f norm;
+        if (pamManifold->normal(point, norm)) {
+            normSplineData.push_back(normalize(norm));
+        } else {
+            RA_LOG_WARN("couldnt find norm vector");
+            return;
+        }
+    }
+    
+    plate = new Plate();
+    plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
+    plate->setupShaders(vShader_Cplus, fShader_Cplus);
+    plate->loadObjFile([[NSBundle mainBundle] pathForResource:@"roundsegment" ofType:@"obj"].UTF8String);
+    plate->scale = 0.1f/2.0;
+    
+    for (int i = 0; i < segSpline->getControlQuantity(); i++)
+    {
+        Vec3f ctrPnt = segSpline->getControlPoint(i);
+        RAUnitSphere* unitSphere = new RAUnitSphere(Vec3f(ctrPnt[0],ctrPnt[1],ctrPnt[2]));
+        unitSphere->setupShaders(vShader_Cplus, fShader_Cplus);
+        unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
+        unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
+        unitSpheres.push_back(unitSphere);
+    }
+    
+    delete tempDepthBuffer;
 }
 
 -(void)handleRotationGesture:(UIRotationGestureRecognizer*)sender
@@ -274,6 +471,11 @@ using namespace Wm5;
 -(void)drawLineButtonClicked:(id)selector
 {
     drawLineMode = !drawLineMode;
+    if (drawLineMode) {
+        glEnable (GL_BLEND);
+    } else {
+        glDisable(GL_BLEND);
+    }
 }
 
 - (void)didReceiveMemoryWarning
@@ -297,6 +499,7 @@ using namespace Wm5;
         pamManifold->loadObjFile(objPath.UTF8String);
         pamManifold->setupShaders();
         pamManifold->bufferVertexDataToGPU();
+        pamManifold->buildKDTree();
         bounds = pamManifold->getBoundingBox();
         
         float rad = bounds.radius;
@@ -309,18 +512,9 @@ using namespace Wm5;
         viewVolumeCenter = pamManifold->getModelMatrix() * Vec4f(bounds.center);
         
         boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
-        std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-        std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
         boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
         boundingBox->bufferVertexDataToGPU();
         boundingBox->translate(viewVolumeCenter - bounds.center);
-        
-//        unitSphere = new RAUnitSphere(viewVolumeCenter);
-//        std::string vShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-//        std::string fShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-//        unitSphere->setupShaders(vShader_Cplus2, fShader_Cplus2);
-//        unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
-//        unitSphere->scale(Vec3(0.02*rad, 0.02*rad, 0.02*rad), Vec3(0,0,0));
     }
     
     [self setPaused:NO];
@@ -346,42 +540,46 @@ using namespace Wm5;
 -(void)glkView:(GLKView *)view drawInRect:(CGRect)rect
 {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
+    if (drawLineMode) {
+        glDisable(GL_DEPTH_TEST);
+    }
+
     pamManifold->projectionMatrix = projectionMatrix;
     pamManifold->viewMatrix = viewMatrix;
     pamManifold->draw();
     
-    boundingBox->projectionMatrix = projectionMatrix;
-    boundingBox->viewMatrix = viewMatrix;
-    boundingBox->draw();
+//    boundingBox->projectionMatrix = projectionMatrix;
+//    boundingBox->viewMatrix = viewMatrix;
+//    boundingBox->draw();
+    
+    if (drawLineMode) {
+       glEnable(GL_DEPTH_TEST);
+    }
     
     for (RAUnitSphere* unitSphere: unitSpheres) {
         unitSphere->projectionMatrix = projectionMatrix;
         unitSphere->viewMatrix = viewMatrix;
         unitSphere->draw();
     }
-    
-    polylineMesh->projectionMatrix = projectionMatrix;
-    polylineMesh->viewMatrix = viewMatrix;
-    polylineMesh->draw();
-    
-    if (unitSpheres.size() > 0)
-    {
-        int mNumSamples = bspline->GetLength(0, 1) * 100;
-        float mult = 1.0f/(mNumSamples - 1);
-        vector<Vec3f> drawPolyline;
-        drawPolyline.reserve(mNumSamples);
-        
-        for (int i = 0; i < mNumSamples; ++i) {
-            Vector3<float> pos = bspline->GetPosition(mult*i);
-            drawPolyline.push_back(Vec3f(pos[0], pos[1], pos[2]));
-        }
-        
-        polylineMeshRecuded->bufferVertexDataToGPU(drawPolyline, Vec4uc(0,255,0,255));
-        polylineMeshRecuded->projectionMatrix = projectionMatrix;
-        polylineMeshRecuded->viewMatrix = viewMatrix;
-        polylineMeshRecuded->draw();
+
+    if (plate!=nullptr) {
+        plate->projectionMatrix = projectionMatrix;
+        plate->viewMatrix = viewMatrix;
+        plate->draw();
     }
+    
+    userDrawnCurve->projectionMatrix = projectionMatrix;
+    userDrawnCurve->viewMatrix = viewMatrix;
+    userDrawnCurve->draw();
+    
+//    userDrawnCurveTesselated->projectionMatrix = projectionMatrix;
+//    userDrawnCurveTesselated->viewMatrix = viewMatrix;
+//    userDrawnCurveTesselated->draw();
+    
+//    plateSpline->projectionMatrix = projectionMatrix;
+//    plateSpline->viewMatrix = viewMatrix;
+//    plateSpline->draw();
+
 }
 
 #pragma mark - Offscreen buffer
@@ -460,7 +658,8 @@ using namespace Wm5;
     return -1;
 }
 
--(BOOL)modelCoordinates:(Vec3f&)modelCoord forGesture:(UIGestureRecognizer*)sender {
+-(BOOL)modelCoordinates:(Vec3f&)modelCoord forGesture:(UIGestureRecognizer*)sender
+{
     CGPoint touchPoint = [self touchPointFromGesture:sender];
     GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
     BOOL result  = [self modelCoordinates:modelCoord forTouchPoint:touchPoint depthBuffer:pixelData];
@@ -470,7 +669,8 @@ using namespace Wm5;
 
 //Convert window coordinates into world coordinates.
 //Touchpoint is in the form of (touchx, touchy). Depth is extracted from given depth buffer information
--(BOOL)modelCoordinates:(Vec3f&)objectCoord3 forTouchPoint:(CGPoint)touchPoint depthBuffer:(GLubyte*)pixelData {
+-(BOOL)modelCoordinates:(Vec3f&)objectCoord3 forTouchPoint:(CGPoint)touchPoint depthBuffer:(GLubyte*)pixelData
+{
     float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
     
     if (depth >= 0) {
@@ -485,12 +685,14 @@ using namespace Wm5;
 }
 
 //Get scaled and flipped touch coordinates from touch gesture
--(CGPoint)touchPointFromGesture:(UIGestureRecognizer*)sender {
+-(CGPoint)touchPointFromGesture:(UIGestureRecognizer*)sender
+{
     return [self scaleTouchPoint:[sender locationInView:sender.view] inView:(GLKView*)sender.view];
 }
 
 //Get scaled and flipped touch coordinates from touch point coordinates in a view
--(CGPoint)scaleTouchPoint:(CGPoint)touchPoint inView:(GLKView*)view {
+-(CGPoint)scaleTouchPoint:(CGPoint)touchPoint inView:(GLKView*)view
+{
     CGFloat scale = view.contentScaleFactor;
     
     touchPoint.x = floorf(touchPoint.x * scale);
@@ -499,6 +701,40 @@ using namespace Wm5;
     
     return touchPoint;
 }
+
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forTouchPoint:(CGPoint)touchPoint
+{
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+    int result = gluUnProjectf(rayStartWindow, projectionMatrix*viewMatrix, viewport, rayOrigin);
+    if (result == 0 ) {
+        return NO;
+    }
+    rayDirection = Vec3f(invert_ortho(rotManager->getRotationMatrix()) * Vec4f(0,0,-1,0));
+    return YES;
+}
+
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forGesture:(UIGestureRecognizer*)gesture
+{
+    CGPoint touchPoint = [self scaleTouchPoint:[gesture locationInView:gesture.view] inView:(GLKView*)gesture.view];
+    return [self rayOrigin:rayOrigin rayDirection:rayDirection forTouchPoint:touchPoint];
+}
+
+template <class C>
+void clearVector(std::vector<C*>& inputvector)
+{
+    for (int i = 0; i < inputvector.size(); i++) {
+        delete inputvector[i];
+    }
+    inputvector.clear();
+}
+
+//-(void)clearPlateSphereVector:(std::vector<RAPlateSegment*>) vector
+//{
+//    for (auto v: vector) {
+//        delete v;
+//    }
+//}
 
 
 @end

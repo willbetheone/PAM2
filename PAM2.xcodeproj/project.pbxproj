@@ -7,10 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		150B74761972162400F3D81D /* RAKDTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150B74741972162400F3D81D /* RAKDTree.cpp */; };
-		150B74771972162400F3D81D /* RAKDTree.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150B74741972162400F3D81D /* RAKDTree.cpp */; };
-		150B7484197217EF00F3D81D /* kdtree.c in Sources */ = {isa = PBXBuildFile; fileRef = 150B7482197217EF00F3D81D /* kdtree.c */; };
-		150B7485197217EF00F3D81D /* kdtree.c in Sources */ = {isa = PBXBuildFile; fileRef = 150B7482197217EF00F3D81D /* kdtree.c */; };
 		150B796D197244CE00F3D81D /* Wm5APoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150B7489197244CD00F3D81D /* Wm5APoint.cpp */; };
 		150B796E197244CE00F3D81D /* Wm5APoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 150B7489197244CD00F3D81D /* Wm5APoint.cpp */; };
 		150B796F197244CE00F3D81D /* Wm5APoint.inl in Resources */ = {isa = PBXBuildFile; fileRef = 150B748B197244CD00F3D81D /* Wm5APoint.inl */; };
@@ -842,6 +838,12 @@
 		150CB2151948F88900636103 /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 150CB2141948F88900636103 /* GLKit.framework */; };
 		150CB2221949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
 		150CB2231949019000636103 /* PAMManifold.mm in Sources */ = {isa = PBXBuildFile; fileRef = 150CB2201949019000636103 /* PAMManifold.mm */; };
+		151A4A941973ADEE00992F42 /* RAPolylineUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 151A4A921973ADEE00992F42 /* RAPolylineUtilities.cpp */; };
+		151A4A951973ADEE00992F42 /* RAPolylineUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 151A4A921973ADEE00992F42 /* RAPolylineUtilities.cpp */; };
+		151A4A981973B5AD00992F42 /* SegmentSpline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 151A4A961973B5AD00992F42 /* SegmentSpline.cpp */; };
+		151A4A991973B5AD00992F42 /* SegmentSpline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 151A4A961973B5AD00992F42 /* SegmentSpline.cpp */; };
+		151A4AE91974EC6300992F42 /* platesegment.obj in Resources */ = {isa = PBXBuildFile; fileRef = 151A4AE81974EC6300992F42 /* platesegment.obj */; };
+		151A4AEA1974EC6300992F42 /* platesegment.obj in Resources */ = {isa = PBXBuildFile; fileRef = 151A4AE81974EC6300992F42 /* platesegment.obj */; };
 		15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		15736AFE195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		157B96211958BEB3008599EC /* PAM.obj in Resources */ = {isa = PBXBuildFile; fileRef = 157B96201958BEB3008599EC /* PAM.obj */; };
@@ -861,10 +863,19 @@
 		159499E1196BA6FC000095C4 /* alfa147.obj in Resources */ = {isa = PBXBuildFile; fileRef = 159499DF196BA6FC000095C4 /* alfa147.obj */; };
 		159499E6196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */; };
 		159499E7196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */; };
-		159499EB196BEF9D000095C4 /* PolylineUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499E9196BEF9C000095C4 /* PolylineUtilities.cpp */; };
-		159499EC196BEF9D000095C4 /* PolylineUtilities.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499E9196BEF9C000095C4 /* PolylineUtilities.cpp */; };
 		159499EF196C01B5000095C4 /* RAPolyLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499ED196C01B5000095C4 /* RAPolyLine.cpp */; };
 		159499F0196C01B5000095C4 /* RAPolyLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499ED196C01B5000095C4 /* RAPolyLine.cpp */; };
+		15AE97211977744500316852 /* MtlLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE970A1977744500316852 /* MtlLoader.cpp */; };
+		15AE97221977744500316852 /* MtlLoader.inl in Resources */ = {isa = PBXBuildFile; fileRef = 15AE970C1977744500316852 /* MtlLoader.inl */; };
+		15AE97231977744500316852 /* MtlLoaderCodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE970D1977744500316852 /* MtlLoaderCodes.cpp */; };
+		15AE97241977744500316852 /* ObjLoader.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE970E1977744500316852 /* ObjLoader.cpp */; };
+		15AE97251977744500316852 /* ObjLoader.inl in Resources */ = {isa = PBXBuildFile; fileRef = 15AE97101977744500316852 /* ObjLoader.inl */; };
+		15AE97261977744500316852 /* ObjLoaderCodes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE97111977744500316852 /* ObjLoaderCodes.cpp */; };
+		15AE97271977744500316852 /* ReadMe.txt in Resources */ = {isa = PBXBuildFile; fileRef = 15AE97121977744500316852 /* ReadMe.txt */; };
+		15AE973219777ABE00316852 /* pelvis.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15AE973119777ABE00316852 /* pelvis.obj */; };
+		15AE97391977A15B00316852 /* Plate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE97371977A15B00316852 /* Plate.cpp */; };
+		15AE973A1977A15B00316852 /* Plate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE97371977A15B00316852 /* Plate.cpp */; };
+		15B7D2A91978A94F008ADA28 /* roundsegment.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15B7D2A81978A94F008ADA28 /* roundsegment.obj */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
 		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAES2VertexBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAES2VertexBuffer.cpp */; };
@@ -936,11 +947,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		150B74741972162400F3D81D /* RAKDTree.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAKDTree.cpp; path = Source/RAEngine/Core/RAKDTree.cpp; sourceTree = "<group>"; };
-		150B74751972162400F3D81D /* RAKDTree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAKDTree.h; path = Source/RAEngine/Core/RAKDTree.h; sourceTree = "<group>"; };
 		150B747B1972179400F3D81D /* libpthread.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpthread.dylib; path = usr/lib/libpthread.dylib; sourceTree = SDKROOT; };
-		150B7482197217EF00F3D81D /* kdtree.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = kdtree.c; path = Source/RAEngine/Core/kdtree.c; sourceTree = "<group>"; };
-		150B7483197217EF00F3D81D /* kdtree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kdtree.h; path = Source/RAEngine/Core/kdtree.h; sourceTree = "<group>"; };
 		150B7489197244CD00F3D81D /* Wm5APoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Wm5APoint.cpp; sourceTree = "<group>"; };
 		150B748A197244CD00F3D81D /* Wm5APoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Wm5APoint.h; sourceTree = "<group>"; };
 		150B748B197244CD00F3D81D /* Wm5APoint.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Wm5APoint.inl; sourceTree = "<group>"; };
@@ -1756,6 +1763,11 @@
 		151926221953D8930006BC76 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		151926231953D8930006BC76 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		151926241953D8930006BC76 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		151A4A921973ADEE00992F42 /* RAPolylineUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAPolylineUtilities.cpp; path = Source/RAEngine/RAPolylineUtilities.cpp; sourceTree = "<group>"; };
+		151A4A931973ADEE00992F42 /* RAPolylineUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAPolylineUtilities.h; path = Source/RAEngine/RAPolylineUtilities.h; sourceTree = "<group>"; };
+		151A4A961973B5AD00992F42 /* SegmentSpline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SegmentSpline.cpp; sourceTree = "<group>"; };
+		151A4A971973B5AD00992F42 /* SegmentSpline.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SegmentSpline.h; sourceTree = "<group>"; };
+		151A4AE81974EC6300992F42 /* platesegment.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = platesegment.obj; path = "../Source/RAEngine/OBJ files/platesegment.obj"; sourceTree = "<group>"; };
 		15736AFC195156AC00055052 /* HAND PAM 15.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "HAND PAM 15.obj"; path = "Temp Files/HAND PAM 15.obj"; sourceTree = "<group>"; };
 		157B96201958BEB3008599EC /* PAM.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PAM.obj; path = "Temp Files/PAM.obj"; sourceTree = "<group>"; };
 		159499C7196B7842000095C4 /* RAES2OffScreenBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAES2OffScreenBuffer.cpp; path = Source/RAEngine/Core/RAES2OffScreenBuffer.cpp; sourceTree = "<group>"; };
@@ -1769,10 +1781,21 @@
 		159499DF196BA6FC000095C4 /* alfa147.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = alfa147.obj; path = ../../../Downloads/alfa147.obj; sourceTree = "<group>"; };
 		159499E4196BE6E6000095C4 /* OssaPlatesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OssaPlatesViewController.h; sourceTree = "<group>"; };
 		159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OssaPlatesViewController.mm; sourceTree = "<group>"; };
-		159499E9196BEF9C000095C4 /* PolylineUtilities.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = PolylineUtilities.cpp; sourceTree = "<group>"; };
-		159499EA196BEF9C000095C4 /* PolylineUtilities.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PolylineUtilities.h; sourceTree = "<group>"; };
 		159499ED196C01B5000095C4 /* RAPolyLine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = RAPolyLine.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		159499EE196C01B5000095C4 /* RAPolyLine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = RAPolyLine.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		15AE970A1977744500316852 /* MtlLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MtlLoader.cpp; sourceTree = "<group>"; };
+		15AE970B1977744500316852 /* MtlLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MtlLoader.h; sourceTree = "<group>"; };
+		15AE970C1977744500316852 /* MtlLoader.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = MtlLoader.inl; sourceTree = "<group>"; };
+		15AE970D1977744500316852 /* MtlLoaderCodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MtlLoaderCodes.cpp; sourceTree = "<group>"; };
+		15AE970E1977744500316852 /* ObjLoader.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjLoader.cpp; sourceTree = "<group>"; };
+		15AE970F1977744500316852 /* ObjLoader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjLoader.h; sourceTree = "<group>"; };
+		15AE97101977744500316852 /* ObjLoader.inl */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ObjLoader.inl; sourceTree = "<group>"; };
+		15AE97111977744500316852 /* ObjLoaderCodes.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjLoaderCodes.cpp; sourceTree = "<group>"; };
+		15AE97121977744500316852 /* ReadMe.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = ReadMe.txt; sourceTree = "<group>"; };
+		15AE973119777ABE00316852 /* pelvis.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = pelvis.obj; path = "Temp Files/pelvis.obj"; sourceTree = "<group>"; };
+		15AE97371977A15B00316852 /* Plate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Plate.cpp; sourceTree = "<group>"; };
+		15AE97381977A15B00316852 /* Plate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Plate.h; sourceTree = "<group>"; };
+		15B7D2A81978A94F008ADA28 /* roundsegment.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = roundsegment.obj; sourceTree = "<group>"; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
 		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -1798,7 +1821,7 @@
 		15D4F0BF1958F678001245FB /* PAMES2ViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = PAMES2ViewController.mm; path = "Source/View Controllers/PAMES2ViewController.mm"; sourceTree = "<group>"; };
 		15D4F0C51958F691001245FB /* RALogManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RALogManager.cpp; sourceTree = "<group>"; };
 		15D4F0C61958F691001245FB /* RALogManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RALogManager.h; sourceTree = "<group>"; };
-		15EEF1C3195F79AD00902AA7 /* sphere.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sphere.obj; sourceTree = "<group>"; };
+		15EEF1C3195F79AD00902AA7 /* sphere.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = sphere.obj; path = "../Source/RAEngine/OBJ files/sphere.obj"; sourceTree = "<group>"; };
 		15EEF1C5195F79AD00902AA7 /* RABoundingBox.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RABoundingBox.cpp; sourceTree = "<group>"; };
 		15EEF1C6195F79AD00902AA7 /* RABoundingBox.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RABoundingBox.h; sourceTree = "<group>"; };
 		15EEF1C7195F79AD00902AA7 /* RAUnitSphere.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RAUnitSphere.cpp; sourceTree = "<group>"; };
@@ -1834,20 +1857,10 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		150B747D197217BB00F3D81D /* KDTree */ = {
-			isa = PBXGroup;
-			children = (
-				150B7482197217EF00F3D81D /* kdtree.c */,
-				150B7483197217EF00F3D81D /* kdtree.h */,
-				150B74741972162400F3D81D /* RAKDTree.cpp */,
-				150B74751972162400F3D81D /* RAKDTree.h */,
-			);
-			name = KDTree;
-			sourceTree = "<group>";
-		};
 		150B7486197244CD00F3D81D /* WildMagic */ = {
 			isa = PBXGroup;
 			children = (
+				15AE96FA1977744500316852 /* Tools */,
 				150B7487197244CD00F3D81D /* LibCore */,
 				150B77A2197244CE00F3D81D /* LibGraphics */,
 			);
@@ -2972,6 +2985,7 @@
 				159499D3196BA1CF000095C4 /* 3DFile.obj */,
 				157B96201958BEB3008599EC /* PAM.obj */,
 				15736AFC195156AC00055052 /* HAND PAM 15.obj */,
+				15AE973119777ABE00316852 /* pelvis.obj */,
 			);
 			name = TempFiles;
 			sourceTree = "<group>";
@@ -2988,12 +3002,41 @@
 		159499E3196BABB6000095C4 /* OssaPlates */ = {
 			isa = PBXGroup;
 			children = (
+				15B7D2A81978A94F008ADA28 /* roundsegment.obj */,
+				151A4AE81974EC6300992F42 /* platesegment.obj */,
+				15EEF1C3195F79AD00902AA7 /* sphere.obj */,
 				159499E4196BE6E6000095C4 /* OssaPlatesViewController.h */,
 				159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */,
-				159499E9196BEF9C000095C4 /* PolylineUtilities.cpp */,
-				159499EA196BEF9C000095C4 /* PolylineUtilities.h */,
+				151A4A961973B5AD00992F42 /* SegmentSpline.cpp */,
+				151A4A971973B5AD00992F42 /* SegmentSpline.h */,
+				15AE97371977A15B00316852 /* Plate.cpp */,
+				15AE97381977A15B00316852 /* Plate.h */,
 			);
 			path = OssaPlates;
+			sourceTree = "<group>";
+		};
+		15AE96FA1977744500316852 /* Tools */ = {
+			isa = PBXGroup;
+			children = (
+				15AE97091977744500316852 /* ObjMtlImporter */,
+			);
+			path = Tools;
+			sourceTree = "<group>";
+		};
+		15AE97091977744500316852 /* ObjMtlImporter */ = {
+			isa = PBXGroup;
+			children = (
+				15AE970A1977744500316852 /* MtlLoader.cpp */,
+				15AE970B1977744500316852 /* MtlLoader.h */,
+				15AE970C1977744500316852 /* MtlLoader.inl */,
+				15AE970D1977744500316852 /* MtlLoaderCodes.cpp */,
+				15AE970E1977744500316852 /* ObjLoader.cpp */,
+				15AE970F1977744500316852 /* ObjLoader.h */,
+				15AE97101977744500316852 /* ObjLoader.inl */,
+				15AE97111977744500316852 /* ObjLoaderCodes.cpp */,
+				15AE97121977744500316852 /* ReadMe.txt */,
+			);
+			path = ObjMtlImporter;
 			sourceTree = "<group>";
 		};
 		15B8A419194CD1AB00CD578C /* Shaders */ = {
@@ -3012,7 +3055,8 @@
 		15B8A41A194CD1B500CD578C /* Core */ = {
 			isa = PBXGroup;
 			children = (
-				150B747D197217BB00F3D81D /* KDTree */,
+				151A4A921973ADEE00992F42 /* RAPolylineUtilities.cpp */,
+				151A4A931973ADEE00992F42 /* RAPolylineUtilities.h */,
 				159499CE196B9B9F000095C4 /* glu */,
 				15EEF1CC195F79D700902AA7 /* ES2 */,
 				15B8BE42195E547F00CE2AE6 /* TransformationManager */,
@@ -3053,7 +3097,6 @@
 			isa = PBXGroup;
 			children = (
 				150B7486197244CD00F3D81D /* WildMagic */,
-				15EEF1C2195F79AD00902AA7 /* OBJ files */,
 				15EEF1C4195F79AD00902AA7 /* Shapes */,
 				15B8A419194CD1AB00CD578C /* Shaders */,
 				15B8A41A194CD1B500CD578C /* Core */,
@@ -3069,15 +3112,6 @@
 			);
 			name = Logging;
 			path = Source/RAEngine/Logging;
-			sourceTree = "<group>";
-		};
-		15EEF1C2195F79AD00902AA7 /* OBJ files */ = {
-			isa = PBXGroup;
-			children = (
-				15EEF1C3195F79AD00902AA7 /* sphere.obj */,
-			);
-			name = "OBJ files";
-			path = "Source/RAEngine/OBJ files";
 			sourceTree = "<group>";
 		};
 		15EEF1C4195F79AD00902AA7 /* Shapes */ = {
@@ -3234,6 +3268,7 @@
 				150B7C2D197244CF00F3D81D /* Wm5Polyhedron3.inl in Resources */,
 				150B7C49197244CF00F3D81D /* Wm5OutStream.inl in Resources */,
 				150B7C35197244CF00F3D81D /* Wm5Sphere3.inl in Resources */,
+				15AE97271977744500316852 /* ReadMe.txt in Resources */,
 				150B7985197244CE00F3D81D /* Wm5HPoint.inl in Resources */,
 				150B7C03197244CF00F3D81D /* Wm5Circle2.inl in Resources */,
 				150B7BFF197244CF00F3D81D /* Wm5AxisAlignedBox2.inl in Resources */,
@@ -3279,6 +3314,7 @@
 				150B7C59197244CF00F3D81D /* Wm5Query2Integer.inl in Resources */,
 				15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */,
 				150B7C67197244CF00F3D81D /* Wm5Integer.inl in Resources */,
+				15B7D2A91978A94F008ADA28 /* roundsegment.obj in Resources */,
 				150B7C25197244CF00F3D81D /* Wm5Frustum3.inl in Resources */,
 				150B7BB1197244CE00F3D81D /* Wm5EdgeKey.inl in Resources */,
 				150B7C5F197244CF00F3D81D /* Wm5Query3Filtered.inl in Resources */,
@@ -3299,6 +3335,7 @@
 				150B79D7197244CE00F3D81D /* Wm5BitHacks.inl in Resources */,
 				150B7BBF197244CE00F3D81D /* Wm5PlanarGraph.inl in Resources */,
 				150B7973197244CE00F3D81D /* Wm5AVector.inl in Resources */,
+				15AE973219777ABE00316852 /* pelvis.obj in Resources */,
 				150B7C37197244CF00F3D81D /* Wm5Tetrahedron3.inl in Resources */,
 				15EEF1D1195FCAEA00902AA7 /* DepthShader.vsh in Resources */,
 				150B7C23197244CF00F3D81D /* Wm5Ellipsoid3.inl in Resources */,
@@ -3317,6 +3354,7 @@
 				150B7BB5197244CE00F3D81D /* Wm5ETManifoldMesh.inl in Resources */,
 				150B7C45197244CF00F3D81D /* Wm5Object.inl in Resources */,
 				157B96211958BEB3008599EC /* PAM.obj in Resources */,
+				15AE97221977744500316852 /* MtlLoader.inl in Resources */,
 				150B7A69197244CE00F3D81D /* Wm5MinHeap.inl in Resources */,
 				150B7C33197244CF00F3D81D /* Wm5Segment3.inl in Resources */,
 				150B7C57197244CF00F3D81D /* Wm5Query2Int64.inl in Resources */,
@@ -3329,6 +3367,7 @@
 				150B7BC3197244CE00F3D81D /* Wm5TriangleKey.inl in Resources */,
 				150B7C5B197244CF00F3D81D /* Wm5Query2Rational.inl in Resources */,
 				159499DD196BA692000095C4 /* shuttle.obj in Resources */,
+				15AE97251977744500316852 /* ObjLoader.inl in Resources */,
 				150B7C4D197244CF00F3D81D /* Wm5Rtti.inl in Resources */,
 				150B7C09197244CF00F3D81D /* Wm5Line2.inl in Resources */,
 				150B7997197244CE00F3D81D /* Wm5Polynomial1.inl in Resources */,
@@ -3336,6 +3375,7 @@
 				150B7BCB197244CF00F3D81D /* Wm5VEManifoldMesh.inl in Resources */,
 				159499DA196BA372000095C4 /* dino.obj in Resources */,
 				150B7C0F197244CF00F3D81D /* Wm5Segment2.inl in Resources */,
+				151A4AE91974EC6300992F42 /* platesegment.obj in Resources */,
 				150B7BC7197244CF00F3D81D /* Wm5UniqueVerticesTriangles.inl in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3388,6 +3428,7 @@
 				150B7982197244CE00F3D81D /* Wm5HPlane.inl in Resources */,
 				150B7C16197244CF00F3D81D /* Wm5Box3.inl in Resources */,
 				150B7C56197244CF00F3D81D /* Wm5Query2Filtered.inl in Resources */,
+				151A4AEA1974EC6300992F42 /* platesegment.obj in Resources */,
 				150B7974197244CE00F3D81D /* Wm5AVector.inl in Resources */,
 				150B7BBA197244CE00F3D81D /* Wm5ETNonmanifoldMesh.inl in Resources */,
 				150B7978197244CE00F3D81D /* Wm5GMatrix.inl in Resources */,
@@ -3549,7 +3590,9 @@
 				150B79F3197244CE00F3D81D /* Wm5Delaunay3.cpp in Sources */,
 				150B7BC1197244CE00F3D81D /* Wm5TetrahedronKey.cpp in Sources */,
 				15B8BE4B195E547F00CE2AE6 /* RATranslationManager.cpp in Sources */,
+				151A4A941973ADEE00992F42 /* RAPolylineUtilities.cpp in Sources */,
 				150CB1D31948E6B900636103 /* main.m in Sources */,
+				15AE97241977744500316852 /* ObjLoader.cpp in Sources */,
 				150B7BA1197244CE00F3D81D /* Wm5IntrUtility3.cpp in Sources */,
 				15D4F0C01958F678001245FB /* BasePAMViewController.mm in Sources */,
 				150B7B27197244CE00F3D81D /* Wm5IntrLine2Circle2.cpp in Sources */,
@@ -3566,7 +3609,6 @@
 				150B7BEB197244CF00F3D81D /* Wm5NoniterativeEigen3x3.cpp in Sources */,
 				150B7A1F197244CE00F3D81D /* Wm5ContSphere3.cpp in Sources */,
 				150B7CDD197244CF00F3D81D /* Wm5HalfFloat.cpp in Sources */,
-				159499EB196BEF9D000095C4 /* PolylineUtilities.cpp in Sources */,
 				150B7B41197244CE00F3D81D /* Wm5IntrLine3Torus3.cpp in Sources */,
 				150B7AB3197244CE00F3D81D /* Wm5DistRay3Segment3.cpp in Sources */,
 				150B7C7D197244CF00F3D81D /* Wm5ScopedCS.cpp in Sources */,
@@ -3589,7 +3631,6 @@
 				150B7AD5197244CE00F3D81D /* Wm5IntpAkimaNonuniform1.cpp in Sources */,
 				150B7A6F197244CE00F3D81D /* Wm5Distance.cpp in Sources */,
 				150CB2221949019000636103 /* PAMManifold.mm in Sources */,
-				150B74761972162400F3D81D /* RAKDTree.cpp in Sources */,
 				150B7B19197244CE00F3D81D /* Wm5IntrEllipsoid3Ellipsoid3.cpp in Sources */,
 				150B79B5197244CE00F3D81D /* Wm5ApprGaussPointsFit3.cpp in Sources */,
 				150B7AC7197244CE00F3D81D /* Wm5BufferIO.cpp in Sources */,
@@ -3629,6 +3670,7 @@
 				150B7BED197244CF00F3D81D /* Wm5OdeEuler.cpp in Sources */,
 				150B7CDF197244CF00F3D81D /* Wm5SpecializedIO.cpp in Sources */,
 				150B7AD7197244CE00F3D81D /* Wm5IntpAkimaUniform1.cpp in Sources */,
+				15AE97211977744500316852 /* MtlLoader.cpp in Sources */,
 				150B7B87197244CE00F3D81D /* Wm5IntrSegment3Plane3.cpp in Sources */,
 				150B7B25197244CE00F3D81D /* Wm5IntrLine2Box2.cpp in Sources */,
 				150B7AF3197244CE00F3D81D /* Wm5IntpSphere2.cpp in Sources */,
@@ -3707,9 +3749,12 @@
 				150B79C3197244CE00F3D81D /* Wm5ApprPolyFit3.cpp in Sources */,
 				150B79CB197244CE00F3D81D /* Wm5ApprPolynomialFit4.cpp in Sources */,
 				150B7BDD197244CF00F3D81D /* Wm5Bisect3.cpp in Sources */,
+				15AE97391977A15B00316852 /* Plate.cpp in Sources */,
 				150B7B5D197244CE00F3D81D /* Wm5IntrRay2Ray2.cpp in Sources */,
 				150B7AFF197244CE00F3D81D /* Wm5Intersector.cpp in Sources */,
+				151A4A981973B5AD00992F42 /* SegmentSpline.cpp in Sources */,
 				150B7AED197244CE00F3D81D /* Wm5IntpLinearNonuniform2.cpp in Sources */,
+				15AE97231977744500316852 /* MtlLoaderCodes.cpp in Sources */,
 				150B7C51197244CF00F3D81D /* Wm5Query.cpp in Sources */,
 				150B7B11197244CE00F3D81D /* Wm5IntrCapsule3Capsule3.cpp in Sources */,
 				150B7C6F197244CF00F3D81D /* Wm5IVector3.cpp in Sources */,
@@ -3718,6 +3763,7 @@
 				150B7B67197244CE00F3D81D /* Wm5IntrRay3Cylinder3.cpp in Sources */,
 				150B7A0D197244CE00F3D81D /* Wm5ContMinBox3.cpp in Sources */,
 				150B7A71197244CE00F3D81D /* Wm5DistCircle3Circle3.cpp in Sources */,
+				15AE97261977744500316852 /* ObjLoaderCodes.cpp in Sources */,
 				150B7B9D197244CE00F3D81D /* Wm5IntrTriangle3Sphere3.cpp in Sources */,
 				150B7AA7197244CE00F3D81D /* Wm5DistPoint3Triangle3.cpp in Sources */,
 				150B7CD9197244CF00F3D81D /* Wm5Color.cpp in Sources */,
@@ -3747,7 +3793,6 @@
 				150B7AB1197244CE00F3D81D /* Wm5DistRay3Rectangle3.cpp in Sources */,
 				150B7B0D197244CE00F3D81D /* Wm5IntrBox3Frustum3.cpp in Sources */,
 				150B7AC3197244CE00F3D81D /* Wm5DistTriangle3Rectangle3.cpp in Sources */,
-				150B7484197217EF00F3D81D /* kdtree.c in Sources */,
 				150B79CF197244CE00F3D81D /* Wm5ApprQuadraticFit3.cpp in Sources */,
 				150B79EB197244CE00F3D81D /* Wm5ConvexHull3.cpp in Sources */,
 				150B7A79197244CE00F3D81D /* Wm5DistLine3Box3.cpp in Sources */,
@@ -3865,7 +3910,6 @@
 				150B7A14197244CE00F3D81D /* Wm5ContPointInPolygon2.cpp in Sources */,
 				150B7BAC197244CE00F3D81D /* Wm5BasicMesh.cpp in Sources */,
 				150B7B54197244CE00F3D81D /* Wm5IntrPlane3Sphere3.cpp in Sources */,
-				159499EC196BEF9D000095C4 /* PolylineUtilities.cpp in Sources */,
 				150B7ADA197244CE00F3D81D /* Wm5IntpAkimaUniform2.cpp in Sources */,
 				150B7A8A197244CE00F3D81D /* Wm5DistPoint2Ellipse2.cpp in Sources */,
 				150B7B4E197244CE00F3D81D /* Wm5IntrPlane3Ellipsoid3.cpp in Sources */,
@@ -3917,6 +3961,7 @@
 				150B7C4C197244CF00F3D81D /* Wm5Rtti.cpp in Sources */,
 				150B7AF0197244CE00F3D81D /* Wm5IntpLinearNonuniform3.cpp in Sources */,
 				150B7AA8197244CE00F3D81D /* Wm5DistPoint3Triangle3.cpp in Sources */,
+				151A4A991973B5AD00992F42 /* SegmentSpline.cpp in Sources */,
 				150B7BDA197244CF00F3D81D /* Wm5Bisect1.cpp in Sources */,
 				150B7AE0197244CE00F3D81D /* Wm5IntpBilinear2.cpp in Sources */,
 				150B7B5E197244CE00F3D81D /* Wm5IntrRay2Ray2.cpp in Sources */,
@@ -4029,6 +4074,7 @@
 				150B7B44197244CE00F3D81D /* Wm5IntrLine3Triangle3.cpp in Sources */,
 				150B7C50197244CF00F3D81D /* Wm5Stream.cpp in Sources */,
 				150B7ADE197244CE00F3D81D /* Wm5IntpBicubic2.cpp in Sources */,
+				151A4A951973ADEE00992F42 /* RAPolylineUtilities.cpp in Sources */,
 				150B7994197244CE00F3D81D /* Wm5Matrix4.cpp in Sources */,
 				150B79FA197244CE00F3D81D /* Wm5ContBox2.cpp in Sources */,
 				150B7AE6197244CE00F3D81D /* Wm5IntpBSplineUniform2.cpp in Sources */,
@@ -4068,7 +4114,6 @@
 				150B7C7E197244CF00F3D81D /* Wm5ScopedCS.cpp in Sources */,
 				150B7B3A197244CE00F3D81D /* Wm5IntrLine3Ellipsoid3.cpp in Sources */,
 				15D4F0C31958F678001245FB /* PAMES2ViewController.mm in Sources */,
-				150B74771972162400F3D81D /* RAKDTree.cpp in Sources */,
 				150B7BA4197244CE00F3D81D /* Wm5Memory.cpp in Sources */,
 				150B7A18197244CE00F3D81D /* Wm5ContScribeCircle2.cpp in Sources */,
 				150B79AC197244CE00F3D81D /* Wm5ApprCylinderFit3.cpp in Sources */,
@@ -4106,7 +4151,6 @@
 				150B7A52197244CE00F3D81D /* Wm5NURBSCurve3.cpp in Sources */,
 				150B7C6C197244CF00F3D81D /* Wm5IVector2.cpp in Sources */,
 				150B7A06197244CE00F3D81D /* Wm5ContEllipsoid3.cpp in Sources */,
-				150B7485197217EF00F3D81D /* kdtree.c in Sources */,
 				150B7AFC197244CE00F3D81D /* Wm5IntpTrilinear3.cpp in Sources */,
 				150B7AF6197244CE00F3D81D /* Wm5IntpThinPlateSpline2.cpp in Sources */,
 				150B7A4C197244CE00F3D81D /* Wm5NaturalSpline2.cpp in Sources */,
@@ -4117,6 +4161,7 @@
 				150B7C48197244CF00F3D81D /* Wm5OutStream.cpp in Sources */,
 				150B79D0197244CE00F3D81D /* Wm5ApprQuadraticFit3.cpp in Sources */,
 				15D4F0C81958F691001245FB /* RALogManager.cpp in Sources */,
+				15AE973A1977A15B00316852 /* Plate.cpp in Sources */,
 				150B79F4197244CE00F3D81D /* Wm5Delaunay3.cpp in Sources */,
 				150B7A22197244CE00F3D81D /* Wm5BezierCurve2.cpp in Sources */,
 				150B798C197244CE00F3D81D /* Wm5Matrix2.cpp in Sources */,
