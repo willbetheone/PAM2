@@ -847,6 +847,7 @@
 		15736AFD195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		15736AFE195156AC00055052 /* HAND PAM 15.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15736AFC195156AC00055052 /* HAND PAM 15.obj */; };
 		157B96211958BEB3008599EC /* PAM.obj in Resources */ = {isa = PBXBuildFile; fileRef = 157B96201958BEB3008599EC /* PAM.obj */; };
+		157BBA7A197DC6B30089B753 /* PAMSettingsManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 157BBA78197DC6B30089B753 /* PAMSettingsManager.cpp */; };
 		159499C9196B7842000095C4 /* RAES2OffScreenBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499C7196B7842000095C4 /* RAES2OffScreenBuffer.cpp */; };
 		159499CA196B7842000095C4 /* RAES2OffScreenBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499C7196B7842000095C4 /* RAES2OffScreenBuffer.cpp */; };
 		159499D1196B9BB6000095C4 /* glu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499CF196B9BB6000095C4 /* glu.cpp */; };
@@ -1770,6 +1771,8 @@
 		151A4AE81974EC6300992F42 /* platesegment.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = platesegment.obj; path = "../Source/RAEngine/OBJ files/platesegment.obj"; sourceTree = "<group>"; };
 		15736AFC195156AC00055052 /* HAND PAM 15.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = "HAND PAM 15.obj"; path = "Temp Files/HAND PAM 15.obj"; sourceTree = "<group>"; };
 		157B96201958BEB3008599EC /* PAM.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PAM.obj; path = "Temp Files/PAM.obj"; sourceTree = "<group>"; };
+		157BBA78197DC6B30089B753 /* PAMSettingsManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PAMSettingsManager.cpp; path = Source/PAMSettingsManager.cpp; sourceTree = "<group>"; };
+		157BBA79197DC6B30089B753 /* PAMSettingsManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PAMSettingsManager.h; path = Source/PAMSettingsManager.h; sourceTree = "<group>"; };
 		159499C7196B7842000095C4 /* RAES2OffScreenBuffer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAES2OffScreenBuffer.cpp; path = Source/RAEngine/Core/RAES2OffScreenBuffer.cpp; sourceTree = "<group>"; };
 		159499C8196B7842000095C4 /* RAES2OffScreenBuffer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RAES2OffScreenBuffer.h; path = Source/RAEngine/Core/RAES2OffScreenBuffer.h; sourceTree = "<group>"; };
 		159499CF196B9BB6000095C4 /* glu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = glu.cpp; path = Source/RAEngine/glu/glu.cpp; sourceTree = "<group>"; };
@@ -2961,6 +2964,8 @@
 			children = (
 				150CB2211949019000636103 /* PAMManifold.h */,
 				150CB2201949019000636103 /* PAMManifold.mm */,
+				157BBA78197DC6B30089B753 /* PAMSettingsManager.cpp */,
+				157BBA79197DC6B30089B753 /* PAMSettingsManager.h */,
 			);
 			name = Source;
 			sourceTree = "<group>";
@@ -3518,6 +3523,7 @@
 				150B7BCD197244CF00F3D81D /* Wm5GridGraph2.cpp in Sources */,
 				150B7A1D197244CE00F3D81D /* Wm5ContSeparatePoints3.cpp in Sources */,
 				150B7A99197244CE00F3D81D /* Wm5DistPoint3Frustum3.cpp in Sources */,
+				157BBA7A197DC6B30089B753 /* PAMSettingsManager.cpp in Sources */,
 				150B7B69197244CE00F3D81D /* Wm5IntrRay3Ellipsoid3.cpp in Sources */,
 				150B7A9D197244CE00F3D81D /* Wm5DistPoint3Plane3.cpp in Sources */,
 				150B7B2B197244CE00F3D81D /* Wm5IntrLine2Ray2.cpp in Sources */,
