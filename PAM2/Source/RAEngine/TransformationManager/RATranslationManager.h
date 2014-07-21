@@ -19,11 +19,14 @@ namespace RAEngine {
     public:
         RATranslationManager();
         CGLA::Mat4x4f getTranslationMatrix() const;
+        CGLA::Vec3f getTranslationVector() const;
         void translate(CGLA::Vec3f translation);
         void handlePanGesture(GestureState state, CGLA::Vec3f translation);
+        CGLA::Vec3f startPoint;
     private:
         CGLA::Mat4x4f translationMatrix;
         CGLA::Mat4x4f accumulatedTranslation;
+        
     };
 }
 

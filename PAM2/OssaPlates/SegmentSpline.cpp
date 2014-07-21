@@ -45,11 +45,7 @@ namespace Ossa {
     
     CGLA::Vec3f SegmentSpline::getControlPoint(int i) const
     {
-        if (i > controlPoints->size()) {
-            RA_LOG_WARN("control point index %i is out of bounds", i);
-            return Vec3f(0,0,0);
-        }
-        
+        assert(i < controlPoints->size());
         return (*controlPoints)[i];
     }
     
@@ -69,7 +65,17 @@ namespace Ossa {
     {
         vector<Vec3f> newControlPoints;
         reduceLineToEqualSegments(newControlPoints, sampleData, segmentLength);
-        controlPoints->erase(controlPoints->begin() + controlPoint + 1, controlPoints->end());
+        controlPoints->erase(controlPoints->begin() + controlPoint, controlPoints->end());
         controlPoints->insert(controlPoints->end(), newControlPoints.begin(), newControlPoints.end());
     }
+    
+    bool SegmentSpline::isCloseToControlPoint(const CGLA::Vec3f& point, int i)
+    {
+        Vec3f ctrl = this->getControlPoint(i);
+        if ((point - ctrl).length() <= segmentLength) {
+            return true;
+        }
+        return false;
+    }
+
 }

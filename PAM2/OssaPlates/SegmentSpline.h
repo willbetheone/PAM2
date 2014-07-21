@@ -30,6 +30,8 @@ namespace Ossa {
         ///change sample data starting from control point give
         void setSampleData(std::vector<CGLA::Vec3f> sampleData, int controlPoint);
         
+        bool isCloseToControlPoint(const CGLA::Vec3f& point, int i);
+        
 
     private:
         std::vector<CGLA::Vec3f>* controlPoints;

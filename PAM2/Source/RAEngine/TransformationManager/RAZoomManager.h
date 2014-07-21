@@ -12,12 +12,14 @@
 #include <iostream>
 #include "TouchScreenGestureStates.h"
 
-namespace RAEngine {
+namespace RAEngine
+{
     class RAZoomManager
     {
     public:
         float getScaleFactor() const;
-        void handlePinchGesture(GestureState state, float scale);
+        void handlePinchGesture(GestureState state,
+                                float scale);
     private:
         float scaleFactor = 1.0f;
         float curFactor;

@@ -24,6 +24,12 @@ namespace RAEngine {
         return translationMatrix;
     }
     
+    CGLA::Vec3f RATranslationManager::getTranslationVector() const
+    {
+        Vec3f translation = Vec3f(translationMatrix[0][3], translationMatrix[1][3], translationMatrix[2][3]);
+        return translation;
+    }
+    
     void RATranslationManager::translate(CGLA::Vec3f translation)
     {
         translationMatrix =  translation_Mat4x4f(translation) * translationMatrix;
@@ -32,16 +38,10 @@ namespace RAEngine {
     
     void RATranslationManager::handlePanGesture(GestureState state, CGLA::Vec3f translation)
     {
-//        UIPanGestureRecognizer* pan = (UIPanGestureRecognizer*)sender;
-//        CGPoint point = [pan translationInView:pan.view];
-//        
-//        GLfloat ratio = pan.view.frame.size.height/pan.view.frame.size.width;
-//        GLfloat x_ndc = point.x/pan.view.frame.size.width;
-//        GLfloat y_ndc = -1*(point.y/pan.view.frame.size.height)*ratio;
-        
-        if (state == GestureState::Changed) {
-//            Vec3f axis(x_ndc*2, y_ndc*2, 0);
-            translationMatrix = translation_Mat4x4f(translation) * accumulatedTranslation;
+        if (state == GestureState::Began) {
+            startPoint = translation;
+        } else if (state == GestureState::Changed) {            
+            translationMatrix = translation_Mat4x4f(translation - startPoint) * accumulatedTranslation;
         } else if (state == GestureState::Ended) {
             accumulatedTranslation = translationMatrix;
         }

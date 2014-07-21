@@ -198,12 +198,9 @@ using namespace Ossa;
 
 -(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
-    if (drawLineMode)
-    {
+    if (drawLineMode) {
         [self handlePlateCreation:sender];
-    }
-    else
-    {
+    } else {
         [self handleControlPointMovement:sender];
     }
 }
@@ -283,6 +280,13 @@ using namespace Ossa;
     {
         polyline.clear();
         tempDepthBuffer = [self renderToOffscreenDepthBuffer:pamManifold];
+        Vec3f modelCoord;
+        if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
+            polyline.push_back(modelCoord);
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+        } else {
+            RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
+        }
     }
     else if (state == GestureState::Changed)
     {
@@ -296,62 +300,34 @@ using namespace Ossa;
     }
     else if (state == GestureState::Ended)
     {
-        clearVector(unitSpheres);
-        delete segSpline;
+        Vec3f modelCoord;
+        if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
+            polyline.push_back(modelCoord);
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+        } else {
+            RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
+        }
         
-        segSpline =  new SegmentSpline(polyline, 0.1f);
-        vector<Vec3f> splineControlPoints;
-        vector<Vec3f> splineData;
-        segSpline->getControlPoints(splineControlPoints);
-        segSpline->getSpline(splineData);
-        userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
-        plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
-        
-        vector<Vec3f> centerSplineData;
-        vector<Vec3f> normSplineData;
-        vector<Vec3f> tangentSplineData;
-        centers(centerSplineData, splineData);
-        tangents(tangentSplineData, splineData);
-        assert(centerSplineData.size() == tangentSplineData.size());
-        
-        for (Vec3f point : centerSplineData) {
-            
-            Vec3f norm;
-            if (pamManifold->normal(point, norm)) {
-                normSplineData.push_back(normalize(norm));
-            } else {
-                RA_LOG_WARN("couldnt find norm vector");
-                return;
+        if (segSpline != nullptr) {
+            Vec3f firstPoint = polyline[0];
+            for (int i = 0; i < segSpline->getControlQuantity(); i++) {
+                if (segSpline->isCloseToControlPoint(firstPoint, i)) {
+                    [self extenedPlate:i];
+                    return;
+                }
             }
         }
         
-        plate = new Plate();
-        plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
-        plate->setupShaders(vShader_Cplus, fShader_Cplus);
-        plate->loadObjFile([[NSBundle mainBundle] pathForResource:@"roundsegment" ofType:@"obj"].UTF8String);
-        plate->scale = 0.1f/2.0;
-        
-        for (int i = 0; i < segSpline->getControlQuantity(); i++)
-        {
-            Vec3f ctrPnt = segSpline->getControlPoint(i);
-            RAUnitSphere* unitSphere = new RAUnitSphere(Vec3f(ctrPnt[0],ctrPnt[1],ctrPnt[2]));
-            unitSphere->setupShaders(vShader_Cplus, fShader_Cplus);
-            unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
-            unitSphere->scale(Vec3(0.02*bounds.radius, 0.02*bounds.radius, 0.02*bounds.radius), Vec3(0,0,0));
-            unitSpheres.push_back(unitSphere);
-        }
-
-        delete tempDepthBuffer;
+        [self createNewPlate];
     }
 }
 
--(void)extenedPlate {
-    clearVector(unitSpheres);
-    delete segSpline;
+-(void)extenedPlate:(int)cntPoint {
     
-    segSpline =  new SegmentSpline(polyline, 0.1f);
     vector<Vec3f> splineControlPoints;
     vector<Vec3f> splineData;
+    polyline.insert(polyline.begin(), segSpline->getControlPoint(cntPoint));
+    segSpline->setSampleData(polyline, cntPoint);
     segSpline->getControlPoints(splineControlPoints);
     segSpline->getSpline(splineData);
     userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
@@ -365,7 +341,6 @@ using namespace Ossa;
     assert(centerSplineData.size() == tangentSplineData.size());
     
     for (Vec3f point : centerSplineData) {
-        
         Vec3f norm;
         if (pamManifold->normal(point, norm)) {
             normSplineData.push_back(normalize(norm));
@@ -374,13 +349,10 @@ using namespace Ossa;
             return;
         }
     }
-    
-    plate = new Plate();
+
     plate->setSpline(centerSplineData, normSplineData, tangentSplineData);
-    plate->setupShaders(vShader_Cplus, fShader_Cplus);
-    plate->loadObjFile([[NSBundle mainBundle] pathForResource:@"roundsegment" ofType:@"obj"].UTF8String);
-    plate->scale = 0.1f/2.0;
     
+    clearVector(unitSpheres);
     for (int i = 0; i < segSpline->getControlQuantity(); i++)
     {
         Vec3f ctrPnt = segSpline->getControlPoint(i);
@@ -454,16 +426,38 @@ using namespace Ossa;
 {
     GestureState state = [self gestureStateForRecognizer:sender];
     zoomManager->handlePinchGesture(state, sender.scale);
+    
+//    if (state == GestureState::Began) {
+//        CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+//                                            inView:(GLKView*)sender.view];
+//        Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+//        Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+//        Vec3f rayOrigin;
+//        gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+//
+//        Vec3f view = viewMatrix.mul_3D_point(viewVolumeCenter);
+//        Vec3f axis(rayOrigin[0] - view[0], rayOrigin[1] - view[1], 0);
+//
+//        translationManager->handlePanGesture(state, axis);
+//    } else if (state == GestureState::Changed) {
+//        Vec3f newPoint = scaling_Mat3x3f(Vec3f(zoomManager->getScaleFactor(), zoomManager->getScaleFactor(), 1)) * translationManager->startPoint;
+//        Vec3f trans = newPoint - translationManager->startPoint;
+//        translationManager->handlePanGesture(state, trans);
+//    } else if (state == GestureState::Ended) {
+//        
+//    }
 }
 
 -(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
-    CGPoint point = [sender translationInView:sender.view];
-    
-    GLfloat ratio = sender.view.frame.size.height/sender.view.frame.size.width;
-    GLfloat x_ndc = point.x/sender.view.frame.size.width;
-    GLfloat y_ndc = -1*(point.y/sender.view.frame.size.height)*ratio;
-    Vec3f axis(x_ndc*2, y_ndc*2, 0);
+    CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+                                        inView:(GLKView*)sender.view];
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+    Vec3f rayOrigin;
+    gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+    Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
+
     GestureState state = [self gestureStateForRecognizer:sender];
     translationManager->handlePanGesture(state, axis);
 }
