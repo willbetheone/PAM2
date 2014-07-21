@@ -437,7 +437,7 @@ using namespace Ossa;
 //
 //        Vec3f view = viewMatrix.mul_3D_point(viewVolumeCenter);
 //        Vec3f axis(rayOrigin[0] - view[0], rayOrigin[1] - view[1], 0);
-//
+//y
 //        translationManager->handlePanGesture(state, axis);
 //    } else if (state == GestureState::Changed) {
 //        Vec3f newPoint = scaling_Mat3x3f(Vec3f(zoomManager->getScaleFactor(), zoomManager->getScaleFactor(), 1)) * translationManager->startPoint;

@@ -23,7 +23,7 @@ using namespace CGLA;
 using namespace PAMMesh;
 using namespace RAEngine;
 
-@interface PAMES2ViewController () {
+@interface PAMES2ViewController() {
     //offscreen color and depth buffer
     RAES2OffScreenBuffer* offScreenBuffer;
     
@@ -33,13 +33,13 @@ using namespace RAEngine;
     PAMManifold* pamManifold;
     RABoundingBox* boundingBox;
     Bounds bounds;
+    Vec3f viewVolumeCenter;
     
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
     
     RAUnitSphere* unitSphere;
-    Vec3f viewVolumeCenter;
 }
 @end
 
@@ -145,8 +145,8 @@ using namespace RAEngine;
 
 -(void)handleTapGestureRecognizer:(UITapGestureRecognizer*)sender
 {
-    Vec3f toucP{};
-    [self modelCoordinates:&toucP forGesture:sender];
+    Vec3f toucP;
+    [self modelCoordinates:toucP forGesture:sender];
     unitSphere->resetTranslation();
     unitSphere->translate(toucP);
 }
@@ -174,12 +174,14 @@ using namespace RAEngine;
 
 -(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
-    CGPoint point = [sender translationInView:sender.view];
+    CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+                                        inView:(GLKView*)sender.view];
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+    Vec3f rayOrigin;
+    gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+    Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
     
-    GLfloat ratio = sender.view.frame.size.height/sender.view.frame.size.width;
-    GLfloat x_ndc = point.x/sender.view.frame.size.width;
-    GLfloat y_ndc = -1*(point.y/sender.view.frame.size.height)*ratio;
-    Vec3f axis(x_ndc*2, y_ndc*2, 0);
     GestureState state = [self gestureStateForRecognizer:sender];
     translationManager->handlePanGesture(state, axis);
 }
@@ -266,16 +268,9 @@ using namespace RAEngine;
     unitSphere->projectionMatrix = projectionMatrix;
     unitSphere->viewMatrix = viewMatrix;
     unitSphere->draw();
-
 }
 
 #pragma mark - Offscreen buffer
-//Renders current scene(only bones) with all transformations applied into offscreen depth buffer.
-//Depth buffer is imitated as a color buffer for glFragCoord.z value written into glFragColor in the fragment shader.
-//Returns data from glReadPixel, i.e. depth values for each pixel
-//-(NSMutableData*)renderToOffscreenDepthBuffer:(std::vector<RAMesh*>) meshesArray {
-
-//-(NSMutableData*)renderToOffscreenDepthBuffer:(RAMesh*) meshesArray {
 -(GLubyte*)renderToOffscreenDepthBuffer:(PAMManifold*) mesh {
     //Preserve previous GL state
     GLboolean wasBlendEnabled;
@@ -294,11 +289,11 @@ using namespace RAEngine;
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     
-//    for (RAMesh* mesh : meshesArray) {
-        mesh->viewMatrix = viewMatrix;
-        mesh->projectionMatrix = projectionMatrix;
-        mesh->drawToDepthBuffer();
-//    }
+    //    for (RAMesh* mesh : meshesArray) {
+    mesh->viewMatrix = viewMatrix;
+    mesh->projectionMatrix = projectionMatrix;
+    mesh->drawToDepthBuffer();
+    //    }
     
     GLubyte* pixelData = new GLubyte[4*_glWidth*_glHeight];
     glReadPixels(0, 0, _glWidth, _glHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
@@ -345,7 +340,8 @@ using namespace RAEngine;
     return -1;
 }
 
--(BOOL)modelCoordinates:(Vec3f*)modelCoord forGesture:(UIGestureRecognizer*)sender {
+-(BOOL)modelCoordinates:(Vec3f&)modelCoord forGesture:(UIGestureRecognizer*)sender
+{
     CGPoint touchPoint = [self touchPointFromGesture:sender];
     GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
     BOOL result  = [self modelCoordinates:modelCoord forTouchPoint:touchPoint depthBuffer:pixelData];
@@ -355,13 +351,14 @@ using namespace RAEngine;
 
 //Convert window coordinates into world coordinates.
 //Touchpoint is in the form of (touchx, touchy). Depth is extracted from given depth buffer information
--(BOOL)modelCoordinates:(Vec3f*)objectCoord3 forTouchPoint:(CGPoint)touchPoint depthBuffer:(GLubyte*)pixelData {
+-(BOOL)modelCoordinates:(Vec3f&)objectCoord3 forTouchPoint:(CGPoint)touchPoint depthBuffer:(GLubyte*)pixelData
+{
     float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
     
     if (depth >= 0) {
         Vec3f windowCoord3 = Vec3f(touchPoint.x, touchPoint.y, depth);
         Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
-        int result = gluUnProjectf(windowCoord3, projectionMatrix*viewMatrix, viewport, *objectCoord3);
+        int result = gluUnProjectf(windowCoord3, projectionMatrix*viewMatrix, viewport, objectCoord3);
         if (result != 0) {
             return YES;
         }
@@ -370,12 +367,14 @@ using namespace RAEngine;
 }
 
 //Get scaled and flipped touch coordinates from touch gesture
--(CGPoint)touchPointFromGesture:(UIGestureRecognizer*)sender {
+-(CGPoint)touchPointFromGesture:(UIGestureRecognizer*)sender
+{
     return [self scaleTouchPoint:[sender locationInView:sender.view] inView:(GLKView*)sender.view];
 }
 
 //Get scaled and flipped touch coordinates from touch point coordinates in a view
--(CGPoint)scaleTouchPoint:(CGPoint)touchPoint inView:(GLKView*)view {
+-(CGPoint)scaleTouchPoint:(CGPoint)touchPoint inView:(GLKView*)view
+{
     CGFloat scale = view.contentScaleFactor;
     
     touchPoint.x = floorf(touchPoint.x * scale);
@@ -383,6 +382,24 @@ using namespace RAEngine;
     touchPoint.y = floorf(view.drawableHeight - touchPoint.y);
     
     return touchPoint;
+}
+
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forTouchPoint:(CGPoint)touchPoint
+{
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+    int result = gluUnProjectf(rayStartWindow, projectionMatrix*viewMatrix, viewport, rayOrigin);
+    if (result == 0 ) {
+        return NO;
+    }
+    rayDirection = Vec3f(invert_ortho(rotManager->getRotationMatrix()) * Vec4f(0,0,-1,0));
+    return YES;
+}
+
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forGesture:(UIGestureRecognizer*)gesture
+{
+    CGPoint touchPoint = [self scaleTouchPoint:[gesture locationInView:gesture.view] inView:(GLKView*)gesture.view];
+    return [self rayOrigin:rayOrigin rayDirection:rayDirection forTouchPoint:touchPoint];
 }
 
 

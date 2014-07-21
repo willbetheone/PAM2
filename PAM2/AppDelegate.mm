@@ -17,7 +17,8 @@
 {
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     // Override point for customization after application launch.
-    self.pamViewController = [[OssaPlatesViewController alloc] init];
+//    self.pamViewController = [[OssaPlatesViewController alloc] init];
+    self.pamViewController = [[PAMES2ViewController alloc] init];
     [self.window setRootViewController:self.pamViewController];
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];
