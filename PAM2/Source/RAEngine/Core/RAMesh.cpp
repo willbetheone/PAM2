@@ -25,13 +25,17 @@ namespace RAEngine {
         scaleMatrix = identity_Mat4x4f();
         
         enabled = false;
+        
+        numVerticies = 0;
+        numIndicies = 0;
+        numWireframeIndicies = 0;
     }
     
     RAMesh::~RAMesh()
     {
         RA_LOG_VERBOSE("Deleting RAMesh");
+
         //Indexed vertex data
-        
         delete positionDataBuffer;
         delete normalDataBuffer;
         delete colorDataBuffer;
@@ -39,6 +43,10 @@ namespace RAEngine {
 
         //Interlieved vertex data
         delete vertexDataBuffer;
+        
+        //Indexed wireframe data
+        delete wireframeColorBuffer;
+        delete wireframeIndexBuffer;
         
         //Vertex array
         delete vertexArray;
@@ -69,13 +77,6 @@ namespace RAEngine {
     {
         return transpose(invert(get_Mat3x3f(getModelViewMatrix())));
     }
-    
-//    void RAMesh::rotate(float radians, Vec3 axis)
-//    {
-//        Vec3f modelAxis = Vec3f(invert_ortho(getModelViewMatrix()) * Vec4f(axis, 0));
-//        Mat4x4f rm = rotation_Mat4x4f(modelAxis, radians);
-//        rotationMatrix = rm * rotationMatrix;
-//    }
     
     void RAMesh::rotate(float radians, Vec3 axis, Vec3 toPivot)
     {

@@ -83,8 +83,17 @@ namespace PAMMesh
         Vec3f* vertexNormals;
         Vec4uc* vertexColors;
         std::vector<unsigned int>* indicies;
-        getVertexData(vertexPositions, vertexNormals, vertexColors, indicies);
+        CGLA::Vec4uc* wireframeColor;
+        std::vector<unsigned int>* wireframeIndicies;
+        
+        getVertexData(vertexPositions,
+                      vertexNormals,
+                      vertexColors,
+                      indicies,
+                      wireframeColor,
+                      wireframeIndicies);
 
+        //MESH
         assert(no_vertices() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
         numVerticies = (GLsizei)no_vertices();
         
@@ -117,51 +126,75 @@ namespace PAMMesh
                                                 indicies->data(),
                                                 GL_STATIC_DRAW,
                                                 GL_ELEMENT_ARRAY_BUFFER);
+        
+        //WIREFRAME
+        wireframeColorBuffer = new RAES2VertexBuffer(sizeof(Vec4uc),
+                                                     numVerticies,
+                                                     wireframeColor,
+                                                     GL_STATIC_DRAW,
+                                                     GL_ARRAY_BUFFER);
+        wireframeColorBuffer->enableAttribute(attrib[ATTRIB_COLOR]);
+        
+        assert(wireframeIndicies->size() < std::numeric_limits<GLsizei>::max()); //narrowing size_t -> GLsize
+        numWireframeIndicies = (GLsizei)wireframeIndicies->size();
+        
+        wireframeIndexBuffer = new RAES2VertexBuffer(sizeof(unsigned int),
+                                                     numWireframeIndicies,
+                                                     wireframeIndicies->data(),
+                                                     GL_STATIC_DRAW,
+                                                     GL_ELEMENT_ARRAY_BUFFER);
         delete[] vertexPositions;
         delete[] vertexNormals;
         delete[] vertexColors;
+        delete[] wireframeColor;
         delete indicies;
+        delete wireframeIndicies;
     }
     
-    void PAMManifold::normalizeVertexCoordinates()
-    {
-        //Calculate Bounding Box
-        Vec3d pmin;
-        Vec3d pmax;
-        HMesh::bbox(*this, pmin, pmax);
-        
-        Vec3d midV = 0.5 * (pmax - pmin);
-        float rad = midV.length();
-        
-        for (VertexID vID: this->vertices()) {
-            Vec3d pos = this->pos(vID);
-            Vec3d newPos = (pos - pmin - midV) / rad;
-            this->pos(vID) = newPos;
-        }
-    }
+//    void PAMManifold::normalizeVertexCoordinates()
+//    {
+//        //Calculate Bounding Box
+//        Vec3d pmin;
+//        Vec3d pmax;
+//        HMesh::bbox(*this, pmin, pmax);
+//        
+//        Vec3d midV = 0.5 * (pmax - pmin);
+//        float rad = midV.length();
+//        
+//        for (VertexID vID: this->vertices()) {
+//            Vec3d pos = this->pos(vID);
+//            Vec3d newPos = (pos - pmin - midV) / rad;
+//            this->pos(vID) = newPos;
+//        }
+//    }
     
     void PAMManifold::getVertexData(CGLA::Vec3f*& vertexPositions,
                                     CGLA::Vec3f*& vertexNormals,
                                     CGLA::Vec4uc*& vertexColors,
-                                    std::vector<unsigned int>*& indicies) const
+                                    std::vector<unsigned int>*& indicies,
+                                    CGLA::Vec4uc*& wireframeColor,
+                                    std::vector<unsigned int>*& wireframeIndicies) const
     {
         Vec4uc color(200,200,200,255);
+        Vec4uc wcolor(180,180,180,255);
         
         vertexPositions = new Vec3f[no_vertices()];
         vertexNormals = new Vec3f[no_vertices()];
         vertexColors = new Vec4uc[no_vertices()];
         indicies = new vector<unsigned int>();
         
+        wireframeColor = new Vec4uc[no_vertices()];
+        wireframeIndicies = new vector<unsigned int>();
+        
         // when interating through faces we need to map VertexID to index
         std::map<VertexID, int>* vertexIDtoIndex = new std::map<VertexID, int>();
         
         int i = 0;
         for (VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid, ++i) {
-//            assert((*vid).index < no_vertices());
-            
             vertexPositions[i] = posf(*vid);
             vertexNormals[i] = HMesh::normalf(*this, *vid);
             vertexColors[i] = color;
+            wireframeColor[i] = wcolor;
             (*vertexIDtoIndex)[*vid] = i;
         }
         
@@ -179,16 +212,39 @@ namespace PAMMesh
                 facet[vertexNum] = index;
                 vertexNum++;
                 
-                if (vertexNum == 4) {
+                if (vertexNum == 4)
+                {
                     //Create a second triangle
                     indicies->push_back(facet[0]);
                     indicies->push_back(facet[2]);
                 }
                 indicies->push_back(index);
             }
+            
+            //add wireframe data
+            if (vertexNum == 3 || vertexNum == 4)
+            {
+                wireframeIndicies->push_back(facet[0]);
+                wireframeIndicies->push_back(facet[1]);
+                wireframeIndicies->push_back(facet[1]);
+                wireframeIndicies->push_back(facet[2]);
+                
+                if (vertexNum == 3)
+                {
+                    wireframeIndicies->push_back(facet[2]);
+                    wireframeIndicies->push_back(facet[0]);
+                }
+                else if (vertexNum == 4)
+                {
+                    wireframeIndicies->push_back(facet[2]);
+                    wireframeIndicies->push_back(facet[3]);
+                    wireframeIndicies->push_back(facet[3]);
+                    wireframeIndicies->push_back(facet[0]);
+                }
+            }
         }
+        
         delete vertexIDtoIndex;
-
     }
     
     bool PAMManifold::normal(const CGLA::Vec3f& point, CGLA::Vec3f& norm)
@@ -269,8 +325,19 @@ namespace PAMMesh
         colorDataBuffer->bind();
         colorDataBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
 
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(2.0f, 2.0f);
+        
         indexDataBuffer->bind();
         indexDataBuffer->drawPreparedArraysIndicies(GL_TRIANGLES, GL_UNSIGNED_INT, numIndicies);
+        
+        wireframeColorBuffer->bind();
+        wireframeColorBuffer->prepareToDraw(attrib[ATTRIB_COLOR], 4, 0, GL_UNSIGNED_BYTE, GL_TRUE);
+        
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        wireframeIndexBuffer->bind();
+        wireframeIndexBuffer->drawPreparedArraysIndicies(GL_LINES, GL_UNSIGNED_INT, numWireframeIndicies);
+
         
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -335,7 +402,7 @@ namespace PAMMesh
         float zValue = 0;
         
         //Find scaled step
-        float c_step = length(viewMatrix.mul_3D_vector(Vec3f(kCENTROID_STEP,0,0)));
+        float c_step = length(viewMatrix.mul_3D_vector(Vec3f(3*kCENTROID_STEP,0,0)));
         vector<Vec2f> r_polyline1, r_polyline2, r_polyline3;
         reduceLineToEqualSegments2D(r_polyline1, polyline1_2d, c_step);
         reduceLineToEqualSegments2D(r_polyline2, polyline2_2d, c_step);

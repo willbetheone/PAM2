@@ -48,6 +48,7 @@ namespace RAEngine
 
         GLsizei numVerticies;
         GLsizei numIndicies;
+        GLsizei numWireframeIndicies;
         
         Mat4x4 getModelViewProjectionMatrix() const;
         Mat4x4 getModelViewMatrix() const;
@@ -134,10 +135,14 @@ namespace RAEngine
         RAES2VertexBuffer* normalDataBuffer = nullptr;
         RAES2VertexBuffer* colorDataBuffer = nullptr;
         RAES2VertexBuffer* indexDataBuffer = nullptr;
-        
+
         //Interlieved vertex data
         RAES2VertexBuffer* vertexDataBuffer = nullptr;
         
+        //Indexed wireframe data
+        RAES2VertexBuffer* wireframeColorBuffer = nullptr;
+        RAES2VertexBuffer* wireframeIndexBuffer = nullptr;
+
         //Vertex array
         RAES2VertexArray* vertexArray = nullptr;
         

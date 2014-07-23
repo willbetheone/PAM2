@@ -338,13 +338,14 @@ using namespace RAEngine;
 -(void)update
 {
     float diam = bounds.radius * 2.0f;
+    float rad = bounds.radius;
     GLfloat aspect = (GLfloat)_glWidth / (GLfloat)_glHeight;
     float scale = 1.0f/zoomManager->getScaleFactor();
     
-    GLfloat left = viewVolumeCenter[0] - diam*aspect*scale;
-    GLfloat right = viewVolumeCenter[0] + diam*aspect*scale;
-    GLfloat bottom = viewVolumeCenter[1] - diam*scale;
-    GLfloat top = viewVolumeCenter[1] + diam*scale;
+    GLfloat left = viewVolumeCenter[0] - rad*aspect*scale;
+    GLfloat right = viewVolumeCenter[0] + rad*aspect*scale;
+    GLfloat bottom = viewVolumeCenter[1] - rad*scale;
+    GLfloat top = viewVolumeCenter[1] + rad*scale;
 
     projectionMatrix = ortho_Mat4x4f(left, right, bottom, top, 1.0f, 1.0f + diam);
     viewMatrix = translationManager->getTranslationMatrix() * rotManager->getRotationMatrix();

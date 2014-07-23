@@ -27,7 +27,7 @@ namespace PAMMesh
         
         void bufferVertexDataToGPU();
         
-        void normalizeVertexCoordinates();
+//        void normalizeVertexCoordinates();
         
         void draw() const override;
         void drawToDepthBuffer();
@@ -56,7 +56,10 @@ namespace PAMMesh
         void getVertexData(CGLA::Vec3f*& vertexPositions,
                            CGLA::Vec3f*& vertexNormals,
                            CGLA::Vec4uc*& vertexColors,
-                           std::vector<unsigned int>*& indicies) const;
+                           std::vector<unsigned int>*& indicies,
+                           CGLA::Vec4uc*& wireframeColor,
+                           std::vector<unsigned int>*& wireframeIndicies) const;
+        
         void populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs);
         int indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib);
     };
