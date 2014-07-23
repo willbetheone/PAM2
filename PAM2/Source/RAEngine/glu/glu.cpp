@@ -17,7 +17,7 @@ int gluUnProjectf(CGLA::Vec3f win, CGLA::Mat4x4f modelviewProjection, CGLA::Vec4
     
     //Now compute the inverse of matrix A
     
-    modelviewProjectionInverse = invert(modelviewProjection);
+    modelviewProjectionInverse = invert_affine(modelviewProjection);
     
     //Transformation of normalized coordinates between -1 and 1
     inVec[0]=(win[0]-(float)viewport[0])/(float)viewport[2]*2.0-1.0;

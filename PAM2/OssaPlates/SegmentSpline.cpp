@@ -19,7 +19,7 @@ namespace Ossa {
     SegmentSpline::SegmentSpline(std::vector<CGLA::Vec3f> sampleData, float segmentLength)
     {
         controlPoints =  new vector<Vec3f>();
-        reduceLineToEqualSegments(*controlPoints, sampleData, segmentLength);
+        reduceLineToEqualSegments3D(*controlPoints, sampleData, segmentLength);
         this->segmentLength = segmentLength;
     }
 
@@ -58,13 +58,13 @@ namespace Ossa {
     
     void SegmentSpline::getSpline(std::vector<CGLA::Vec3f>& splineData) const
     {
-        reduceLineToEqualSegments(splineData, *controlPoints, segmentLength);
+        reduceLineToEqualSegments3D(splineData, *controlPoints, segmentLength);
     }
     
     void SegmentSpline::setSampleData(std::vector<CGLA::Vec3f> sampleData, int controlPoint)
     {
         vector<Vec3f> newControlPoints;
-        reduceLineToEqualSegments(newControlPoints, sampleData, segmentLength);
+        reduceLineToEqualSegments3D(newControlPoints, sampleData, segmentLength);
         controlPoints->erase(controlPoints->begin() + controlPoint, controlPoints->end());
         controlPoints->insert(controlPoints->end(), newControlPoints.begin(), newControlPoints.end());
     }

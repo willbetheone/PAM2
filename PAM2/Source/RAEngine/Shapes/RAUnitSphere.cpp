@@ -96,6 +96,9 @@ namespace RAEngine
     
     void RAUnitSphere::draw() const
     {
+        if  (!enabled)
+            return;
+        
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
 //        Mat3x3 normal = transpose(getNormalMatrix());
         

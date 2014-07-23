@@ -11,7 +11,6 @@
 
 #include <iostream>
 #include <OpenGLES/ES2/gl.h>
-#include "PAMManifold.h"
 
 namespace RAEngine {
 

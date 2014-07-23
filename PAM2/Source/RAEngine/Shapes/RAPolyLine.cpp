@@ -51,8 +51,6 @@ namespace RAEngine
         colorDataBuffer->enableAttribute(attrib[ATTRIB_COLOR]);
         
         delete[] vertexColors;
-        
-        readyToDraw = true;
     }
     
     Bounds RAPolyLine::getBoundingBox() const
@@ -62,7 +60,7 @@ namespace RAEngine
     
     void RAPolyLine::draw() const
     {
-        if(!readyToDraw)
+        if(!enabled)
             return;
             
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());

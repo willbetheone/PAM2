@@ -12,7 +12,7 @@
 #include <iostream>
 
 namespace PAMMesh
-{    
+{
     class PAMSettingsManager
     {
     public:

@@ -14,7 +14,10 @@
 #include <limits.h>
 #include "../HMesh/obj_load.h"
 #include <map>
+#include "RAPolylineUtilities.h"
+#include "Quatf.h"
 
+#define kCENTROID_STEP 0.025f
 
 namespace PAMMesh
 {
@@ -242,6 +245,9 @@ namespace PAMMesh
     
     void PAMManifold::draw() const
     {
+        if (!enabled)
+            return;
+        
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
         Mat3x3 normalMat = transpose(getNormalMatrix());
         
@@ -303,6 +309,190 @@ namespace PAMMesh
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         
         glPopGroupMarkerEXT();
+    }
+
+#pragma mark - MODELING FUNCTIONS
+    void PAMManifold::createBody(std::vector<CGLA::Vec3f>& polyline1,
+                                 std::vector<CGLA::Vec3f>& polyline2)
+    {
+        assert(polyline1.size() == polyline2.size());
+        if (polyline1.size() < 4) {
+            RA_LOG_WARN("Garbage point data");
+            return;
+        }
+
+        //left line, right line and the centroid between them
+        vector<Vec2f> polyline1_2d, polyline2_2d, polyline3_2d;
+        for (int i = 0; i < polyline1.size(); i++)
+        {
+            Vec3f vWorld1 = viewMatrix.mul_3D_point(polyline1[i]);
+            Vec3f vWorld2 = viewMatrix.mul_3D_point(polyline2[i]);
+            polyline1_2d.push_back(Vec2f(vWorld1));
+            polyline2_2d.push_back(Vec2f(vWorld2));
+            polyline3_2d.push_back(0.5f * (polyline1_2d[i] + polyline2_2d[i]));
+        }
+//        float zValue = viewMatrix.mul_3D_point(polyline1[0])[2];
+        float zValue = 0;
+        
+        //Find scaled step
+        float c_step = length(viewMatrix.mul_3D_vector(Vec3f(kCENTROID_STEP,0,0)));
+        vector<Vec2f> r_polyline1, r_polyline2, r_polyline3;
+        reduceLineToEqualSegments2D(r_polyline1, polyline1_2d, c_step);
+        reduceLineToEqualSegments2D(r_polyline2, polyline2_2d, c_step);
+        reduceLineToEqualSegments2D(r_polyline3, polyline3_2d, c_step);
+        
+        if (r_polyline3.size() < 4) {
+            return;
+        }
+        
+        //Calculate tangents and normals
+        vector<Vec2f> r_polyline3_t, r_polyline3_n;
+        getTangents2D(r_polyline3_t, r_polyline3);
+        getNormals2D(r_polyline3_n, r_polyline3_t, r_polyline3);
+        
+        //Parse new skeleton and create ribs
+        //Ingore first and last centroids since they are poles
+        int numSpines = 50;
+        vector<vector<Vec3f>> allRibs(r_polyline3.size());
+        vector<Vec3f> skeletonModel, skeletonNormalsModel;
+
+        for (int i = 0; i < r_polyline3.size(); i++) {
+            Vec3f sModel = invert_affine(viewMatrix).mul_3D_point(Vec3f(r_polyline3[i], zValue));
+            
+            //dont preserve translation for norma and tangent
+            float ribWidth = 0.3; //TODO
+            Vec3f nModel = invert_affine(viewMatrix).mul_3D_vector(Vec3f(ribWidth * r_polyline3_n[i], 0));
+            Vec3f tModel = invert_affine(viewMatrix).mul_3D_vector(Vec3f(r_polyline3_t[i], 0));
+            
+            if (i == 0) {
+                vector<Vec3f> firstPole;
+                firstPole.push_back(sModel);
+                allRibs[0] = firstPole;
+            } else if (i == r_polyline3.size() - 1) {
+                vector<Vec3f> secondPole;
+                secondPole.push_back(sModel);
+                allRibs[i] = secondPole;
+            } else {
+                vector<Vec3f> ribs(numSpines);
+                float rot_step = 360.0f/numSpines;
+                for (int j = 0; j < numSpines; j++) {
+                    float angle = j * rot_step;
+                    Quatf quat;
+                    quat.make_rot(angle*DEGREES_TO_RADIANS, normalize(tModel));
+                    Vec3f newNorm = quat.get_Mat4x4f().mul_3D_vector(nModel);
+                    Vec3f newRibPoint = newNorm + sModel;
+                    ribs[j] = newRibPoint;
+                }
+                allRibs[i] = ribs;
+            }
+            skeletonModel.push_back(sModel);
+            skeletonNormalsModel.push_back(nModel);
+        }
+        
+        populateManifold(allRibs);
+    }
+    
+    void PAMManifold::populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs)
+    {
+        vector<Vec3f> vertices;
+        vector<int> faces;
+        vector<int> indices;
+        
+        //Add all verticies
+        for (int i = 0; i < allRibs.size(); i++) {
+            vector<Vec3f> rib = allRibs[i];
+            for (int j = 0; j < rib.size(); j++) {
+                Vec3f v = rib[j];
+                vertices.push_back(v);
+            }
+        }
+        
+        for (int i = 0; i < allRibs.size() - 1; i++) {
+            
+            if (i == 0) { //pole 1
+                vector<Vec3f> pole = allRibs[i];
+                vector<Vec3f> rib = allRibs[i+1];
+                int poleIndex = 0;
+                for (int j = 0; j < rib.size(); j++) {
+                    indices.push_back(poleIndex);
+                    if (j == rib.size() - 1) {
+                        int index1 = indexForCentroid(1,j,allRibs.size(),rib.size());
+                        int index2 = indexForCentroid(1,0,allRibs.size(),rib.size());
+                        indices.push_back(index2);
+                        indices.push_back(index1);
+                    } else {
+                        int index1 = indexForCentroid(1,j,allRibs.size(),rib.size());
+                        int index2 = indexForCentroid(1,j+1,allRibs.size(),rib.size());
+                        indices.push_back(index2);
+                        indices.push_back(index1);
+                    }
+                    faces.push_back(3);
+                }
+            } else if (i == allRibs.size() - 2) { //pole 2
+                vector<Vec3f> pole = allRibs[i+1];
+                vector<Vec3f> rib = allRibs[i];
+                int poleIndex = indexForCentroid(i+1,0,allRibs.size(),rib.size());
+                for (int j = 0; j < rib.size(); j++) {
+                    indices.push_back(poleIndex);
+                    if (j == rib.size() - 1) {
+                        int index1 = indexForCentroid(i,j,allRibs.size(),rib.size());
+                        int index2 = indexForCentroid(i,0,allRibs.size(),rib.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                    } else {
+                        int index1 = indexForCentroid(i,j,allRibs.size(),rib.size());
+                        int index2 = indexForCentroid(i,j+1,allRibs.size(),rib.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                    }
+                    faces.push_back(3);
+                }
+            } else {
+                vector<Vec3f> rib1 = allRibs[i];
+                vector<Vec3f> rib2 = allRibs[i+1];
+                
+                for (int j = 0; j < rib1.size(); j++) {
+                    if (j == rib1.size() - 1) {
+                        int index1 = indexForCentroid(i,j,allRibs.size(),rib1.size());
+                        int index2 = indexForCentroid(i,0,allRibs.size(),rib1.size());
+                        int index3 = indexForCentroid(i+1,0,allRibs.size(),rib1.size());
+                        int index4 = indexForCentroid(i+1,j,allRibs.size(),rib1.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                        indices.push_back(index3);
+                        indices.push_back(index4);
+                    } else {
+                        int index1 = indexForCentroid(i,j,allRibs.size(),rib1.size());
+                        int index2 = indexForCentroid(i,j+1,allRibs.size(),rib1.size());
+                        int index3 = indexForCentroid(i+1,j+1,allRibs.size(),rib1.size());
+                        int index4 = indexForCentroid(i+1,j,allRibs.size(),rib1.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                        indices.push_back(index3);
+                        indices.push_back(index4);
+                    }
+                    faces.push_back(4);
+                }
+            }
+        }
+        
+        clear();
+        build(vertices.size(),
+                reinterpret_cast<float*>(&vertices[0]),
+                faces.size(),
+                &faces[0],
+                &indices[0]);
+    }
+    
+    int PAMManifold::indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib)
+    {
+        if (centeroid == 0) {
+            return 0;
+        } else if (centeroid == totalCentroid - 1) {
+            return (totalCentroid - 2)*totalRib + 2 - 1;
+        } else {
+            return 1 + (centeroid - 1)*totalRib + rib;
+        }
     }
 
 }

@@ -23,6 +23,8 @@ namespace RAEngine {
         translationMatrix = identity_Mat4x4f();
         rotationMatrix = identity_Mat4x4f();
         scaleMatrix = identity_Mat4x4f();
+        
+        enabled = false;
     }
     
     RAMesh::~RAMesh()

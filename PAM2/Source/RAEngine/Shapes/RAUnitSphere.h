@@ -22,8 +22,6 @@ namespace RAEngine {
         void setCenter(const CGLA::Vec3f& point);
 
         void setupShaders(const std::string vertexShader, const std::string fragmentShader);
-//        void bufferVertexDataToGPU(bool deleteCPUdata);
-        
         void resetTranslation();
         int  loadObjFile(const char* path) override;
         Bounds getBoundingBox() const override;

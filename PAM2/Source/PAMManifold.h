@@ -15,9 +15,8 @@
 #include "RAMesh.h"
 #include "KDTree.h"
 
-
-namespace PAMMesh {
-    
+namespace PAMMesh
+{
     class PAMManifold : public HMesh::Manifold, public RAEngine::RAMesh
     {
     public:
@@ -44,6 +43,11 @@ namespace PAMMesh {
         
         ///add kd tree support
         void buildKDTree();
+        
+        /* MODELING FUNCTIONS */
+        void createBody(std::vector<CGLA::Vec3f>& polyline1,
+                        std::vector<CGLA::Vec3f>& polyline2);
+        
     private:
         Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree = nullptr;
         
@@ -53,7 +57,11 @@ namespace PAMMesh {
                            CGLA::Vec3f*& vertexNormals,
                            CGLA::Vec4uc*& vertexColors,
                            std::vector<unsigned int>*& indicies) const;
+        void populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs);
+        int indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib);
     };
 }
+
+
 
 #endif /* defined(__PAM2__PAMManifold__) */

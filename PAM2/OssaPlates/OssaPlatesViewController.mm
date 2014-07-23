@@ -238,8 +238,8 @@ using namespace Ossa;
                 vector<Vec3f> centerSplineData;
                 vector<Vec3f> normSplineData;
                 vector<Vec3f> tangentSplineData;
-                centers(centerSplineData, splineData);
-                tangents(tangentSplineData, splineData);
+//                centers(centerSplineData, splineData);
+//                tangents(tangentSplineData, splineData);
                 assert(centerSplineData.size() == tangentSplineData.size());
                 
                 for (Vec3f point : centerSplineData) {
@@ -336,8 +336,8 @@ using namespace Ossa;
     vector<Vec3f> centerSplineData;
     vector<Vec3f> normSplineData;
     vector<Vec3f> tangentSplineData;
-    centers(centerSplineData, splineData);
-    tangents(tangentSplineData, splineData);
+//    centers(centerSplineData, splineData);
+//    tangents(tangentSplineData, splineData);
     assert(centerSplineData.size() == tangentSplineData.size());
     
     for (Vec3f point : centerSplineData) {
@@ -381,8 +381,8 @@ using namespace Ossa;
     vector<Vec3f> centerSplineData;
     vector<Vec3f> normSplineData;
     vector<Vec3f> tangentSplineData;
-    centers(centerSplineData, splineData);
-    tangents(tangentSplineData, splineData);
+//    centers(centerSplineData, splineData);
+//    tangents(tangentSplineData, splineData);
     assert(centerSplineData.size() == tangentSplineData.size());
     
     for (Vec3f point : centerSplineData) {
@@ -450,6 +450,8 @@ using namespace Ossa;
 
 -(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
+    
+    
     CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
                                         inView:(GLKView*)sender.view];
     Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
@@ -577,12 +579,6 @@ using namespace Ossa;
 }
 
 #pragma mark - Offscreen buffer
-//Renders current scene(only bones) with all transformations applied into offscreen depth buffer.
-//Depth buffer is imitated as a color buffer for glFragCoord.z value written into glFragColor in the fragment shader.
-//Returns data from glReadPixel, i.e. depth values for each pixel
-//-(NSMutableData*)renderToOffscreenDepthBuffer:(std::vector<RAMesh*>) meshesArray {
-
-//-(NSMutableData*)renderToOffscreenDepthBuffer:(RAMesh*) meshesArray {
 -(GLubyte*)renderToOffscreenDepthBuffer:(PAMManifold*) mesh {
     //Preserve previous GL state
     GLboolean wasBlendEnabled;

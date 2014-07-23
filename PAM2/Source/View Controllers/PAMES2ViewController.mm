@@ -17,53 +17,71 @@
 #include "RAUnitSphere.h"
 #include "RAES2OffScreenBuffer.h"
 #include "glu.h"
+#include "PAMSettingsManager.h"
+#include "RAPolyLine.h"
 
 using namespace std;
 using namespace CGLA;
 using namespace PAMMesh;
 using namespace RAEngine;
 
-@interface PAMES2ViewController() {
-    //offscreen color and depth buffer
-    RAES2OffScreenBuffer* offScreenBuffer;
+@interface PAMES2ViewController()
+{
+    RAES2OffScreenBuffer* offScreenBuffer; //offscreen color and depth buffer
     
     Mat4x4f viewMatrix;
     Mat4x4f projectionMatrix;
-    
-    PAMManifold* pamManifold;
-    RABoundingBox* boundingBox;
-    Bounds bounds;
     Vec3f viewVolumeCenter;
     
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
-    
-    RAUnitSphere* unitSphere;
 }
 @end
 
-@implementation PAMES2ViewController
-
-- (id)init
+//Gestures
+@interface PAMES2ViewController()
 {
-    self = [super init];
-    if (self) {
-        // Custom initialization
-        rotManager = new RARotationManager();
-        zoomManager = new RAZoomManager();
-        translationManager = new RATranslationManager();
-    }
-    return self;
+    UIPanGestureRecognizer* twoFingerTranslation;
 }
+@end
+
+//Meshes
+@interface PAMES2ViewController()
+{
+    PAMManifold* pamManifold;
+    Bounds bounds;
+    
+    RABoundingBox* boundingBox;
+    RAPolyLine* polyline1;
+    vector<Vec3f> polyline1Data;
+    RAPolyLine* polyline2;
+    vector<Vec3f> polyline2Data;
+}
+@end
+
+
+@implementation PAMES2ViewController
 
 #pragma mark - View cycle and OpenGL setup
 - (void)viewDidLoad
 {
     [super viewDidLoad];
     [self setupGL];
-    [self loadMeshData];
+    [self loadEmptyMeshData];
     [self addGestureRecognizersToView:self.view];
+    
+    // Custom initialization
+    rotManager = new RARotationManager();
+    zoomManager = new RAZoomManager();
+    translationManager = new RATranslationManager();
+    
+    polyline1 = new RAPolyLine();
+    polyline2 = new RAPolyLine();
+    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+    polyline1->setupShaders(vShader_Cplus, fShader_Cplus);
+    polyline2->setupShaders(vShader_Cplus, fShader_Cplus);
 }
 
 - (void)viewDidUnload
@@ -76,7 +94,8 @@ using namespace RAEngine;
     delete rotManager;
     delete zoomManager;
     delete translationManager;
-    delete unitSphere;
+    delete polyline1;
+    delete polyline2;
     
     ((GLKView *)self.view).context = nil;
     [EAGLContext setCurrentContext:nil];
@@ -89,6 +108,12 @@ using namespace RAEngine;
     offScreenBuffer->createOffScreenBuffer(_glWidth, _glHeight);
 }
 
+- (void)didReceiveMemoryWarning
+{
+    [super didReceiveMemoryWarning];
+    // Dispose of any resources that can be recreated.
+}
+
 -(void)setupGL
 {
     glEnable(GL_DEPTH_TEST);
@@ -96,6 +121,7 @@ using namespace RAEngine;
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
+#pragma mark - Gesture Recongnizers
 -(void)addGestureRecognizersToView:(UIView*)view
 {
     // Side Rotation
@@ -110,9 +136,9 @@ using namespace RAEngine;
     //Zoom
     UIPinchGestureRecognizer* pinchToZoom = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
     [view addGestureRecognizer:pinchToZoom];
-    
+
     //Translation
-    UIPanGestureRecognizer* twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
+    twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
     twoFingerTranslation.minimumNumberOfTouches = 2;
     twoFingerTranslation.maximumNumberOfTouches = 2;
     [view addGestureRecognizer:twoFingerTranslation];
@@ -145,10 +171,8 @@ using namespace RAEngine;
 
 -(void)handleTapGestureRecognizer:(UITapGestureRecognizer*)sender
 {
-    Vec3f toucP;
-    [self modelCoordinates:toucP forGesture:sender];
-    unitSphere->resetTranslation();
-    unitSphere->translate(toucP);
+//    Vec3f toucP;
+//    [self modelCoordinates:toucP forGesture:sender];
 }
 
 -(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
@@ -174,66 +198,139 @@ using namespace RAEngine;
 
 -(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
-    CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
-                                        inView:(GLKView*)sender.view];
-    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
-    Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
-    Vec3f rayOrigin;
-    gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
-    Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
-    
-    GestureState state = [self gestureStateForRecognizer:sender];
-    translationManager->handlePanGesture(state, axis);
+    if (PAMSettingsManager::getInstance().transform)
+    {
+        CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+                                            inView:(GLKView*)sender.view];
+        Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+        Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+        Vec3f rayOrigin;
+        gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+        Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
+        
+        GestureState state = [self gestureStateForRecognizer:sender];
+        translationManager->handlePanGesture(state, axis);
+    }
+    else
+    {
+        if (sender.state == UIGestureRecognizerStateBegan)
+        {
+            polyline1Data.clear();
+            polyline2Data.clear();
+            polyline1->enabled = true;
+            polyline2->enabled = true;
+        }
+        
+        if (sender.numberOfTouches == 2)
+        {
+            CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
+                                                 inView:(GLKView*)sender.view];
+            CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
+                                                 inView:(GLKView*)sender.view];
+            
+            Vec3f rayOrigin1, rayOrigin2;
+            BOOL result1 = [self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1];
+            BOOL result2 = [self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2];
+            if (!result1 || !result2) {
+                RA_LOG_WARN("Couldn't determine touch area");
+                return;
+            }
+            
+            polyline1Data.push_back(rayOrigin1);
+            polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255));
+            polyline2Data.push_back(rayOrigin2);
+            polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255));
+        }
+
+        if (sender.state == UIGestureRecognizerStateEnded ||
+            sender.state == UIGestureRecognizerStateFailed ||
+            sender.state == UIGestureRecognizerStateCancelled)
+        {
+            polyline1->enabled = false;
+            polyline2->enabled = false;
+
+            if (pamManifold != nullptr) {
+                delete pamManifold;
+            }
+            pamManifold = new PAMManifold();
+            pamManifold->setupShaders();
+            pamManifold->createBody(polyline1Data, polyline2Data);
+            pamManifold->bufferVertexDataToGPU();
+            pamManifold->enabled = true;
+            
+            GLfloat zNear = 1.0;
+            GLfloat newOriginZ = -1*(zNear + bounds.radius);
+            GLfloat curOriginZ = bounds.center[2];
+            
+            pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+            
+            [self setupBoundingBox];
+        }
+    }
 }
 
-- (void)didReceiveMemoryWarning
+//Load empty workspace
+-(void)loadEmptyMeshData
 {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+    [self setPaused:YES];
+    bounds = {Vec3f(-1,-1,-1), Vec3f(1,1,1), Vec3f(0,0,0), 2*sqrtf(3.0f)/2.0f};
+
+    GLfloat zNear = 1.0;
+    GLfloat newOriginZ = -1*(zNear + bounds.radius);
+    GLfloat curOriginZ = bounds.center[2];
+
+    Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+    viewVolumeCenter = tV + bounds.center;
+    
+    [self setupBoundingBox];
+
+    [self setPaused:NO];
 }
 
 //Load initial mesh from OBJ file
--(void)loadMeshData {
-    
+-(void)loadMeshData
+{
     [self setPaused:YES]; //pause rendering
-    if (pamManifold != nullptr) {
-        delete pamManifold;
-    }
-    pamManifold = new PAMManifold();
     
     //Load obj file
     NSString* objPath = [[NSBundle mainBundle] pathForResource:@"shuttle" ofType:@"obj"];
     if (objPath) {
+        if (pamManifold != nullptr) {
+            delete pamManifold;
+        }
+        pamManifold = new PAMManifold();
         pamManifold->loadObjFile(objPath.UTF8String);
         pamManifold->setupShaders();
         pamManifold->bufferVertexDataToGPU();
+
         bounds = pamManifold->getBoundingBox();
         
-        float rad = bounds.radius;
-        GLfloat zNear = 1.0;
-        
-        GLfloat newOriginZ = -1*(zNear + rad);
+        GLfloat zNear = 1.0f;
+        GLfloat newOriginZ = -1 * (zNear + bounds.radius);
         GLfloat curOriginZ = bounds.center[2];
         
-        pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-        viewVolumeCenter = pamManifold->getModelMatrix() * Vec4f(bounds.center);
-        
-        boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
-        std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-        std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-        boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
-        boundingBox->bufferVertexDataToGPU();
-        boundingBox->translate(viewVolumeCenter - bounds.center);
-        
-        unitSphere = new RAUnitSphere(viewVolumeCenter);
-        std::string vShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-        std::string fShader_Cplus2([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-        unitSphere->setupShaders(vShader_Cplus2, fShader_Cplus2);
-        unitSphere->loadObjFile([[NSBundle mainBundle] pathForResource:@"sphere" ofType:@"obj"].UTF8String);
-        unitSphere->scale(Vec3(0.02*rad, 0.02*rad, 0.02*rad), Vec3(0,0,0));
+        Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+        pamManifold->translate(tV);
+        viewVolumeCenter = tV + bounds.center;
+        [self setupBoundingBox];
     }
     
     [self setPaused:NO];
+}
+
+-(void)setupBoundingBox
+{
+    if (boundingBox != nullptr) {
+        delete boundingBox;
+    }
+    
+    boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
+    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+    boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
+    boundingBox->bufferVertexDataToGPU();
+    boundingBox->translate(viewVolumeCenter - bounds.center);
+    boundingBox->enabled = true;
 }
 
 #pragma mark - OpenGL Drawing
@@ -257,17 +354,25 @@ using namespace RAEngine;
 {
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
     
-    pamManifold->projectionMatrix = projectionMatrix;
-    pamManifold->viewMatrix = viewMatrix;
-    pamManifold->draw();
+    if (pamManifold != nullptr) {
+        pamManifold->projectionMatrix = projectionMatrix;
+        pamManifold->viewMatrix = viewMatrix;
+        pamManifold->draw();
+    }
     
-    boundingBox->projectionMatrix = projectionMatrix;
-    boundingBox->viewMatrix = viewMatrix;
-    boundingBox->draw();
-
-    unitSphere->projectionMatrix = projectionMatrix;
-    unitSphere->viewMatrix = viewMatrix;
-    unitSphere->draw();
+    if (boundingBox != nullptr) {
+        boundingBox->projectionMatrix = projectionMatrix;
+        boundingBox->viewMatrix = viewMatrix;
+        boundingBox->draw();
+    }
+    
+    polyline1->projectionMatrix = projectionMatrix;
+    polyline1->viewMatrix = viewMatrix;
+    polyline1->draw();
+    
+    polyline2->projectionMatrix = projectionMatrix;
+    polyline2->viewMatrix = viewMatrix;
+    polyline2->draw();
 }
 
 #pragma mark - Offscreen buffer
@@ -384,15 +489,21 @@ using namespace RAEngine;
     return touchPoint;
 }
 
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin forTouchPoint:(CGPoint)touchPoint
+{
+    Vec3f rayDir;
+    return [self rayOrigin:rayOrigin rayDirection:rayDir forTouchPoint:touchPoint];
+}
+
 -(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forTouchPoint:(CGPoint)touchPoint
 {
-    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0.5);
     Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
     int result = gluUnProjectf(rayStartWindow, projectionMatrix*viewMatrix, viewport, rayOrigin);
     if (result == 0 ) {
         return NO;
     }
-    rayDirection = Vec3f(invert_ortho(rotManager->getRotationMatrix()) * Vec4f(0,0,-1,0));
+    rayDirection = Vec3f(invert_affine(rotManager->getRotationMatrix()) * Vec4f(0,0,-1,0));
     return YES;
 }
 

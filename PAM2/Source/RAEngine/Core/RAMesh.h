@@ -41,6 +41,8 @@ namespace RAEngine
         RAMesh();
         ~RAMesh();
         
+        bool enabled;
+        
         Mat4x4 viewMatrix;
         Mat4x4 projectionMatrix;
 

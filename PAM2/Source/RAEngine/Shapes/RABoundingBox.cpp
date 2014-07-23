@@ -112,6 +112,10 @@ namespace RAEngine {
     
     void RABoundingBox::draw() const
     {
+        if (!enabled) {
+            return;
+        }
+        
         Mat4x4 mvpMat = transpose(getModelViewProjectionMatrix());
         
         glPushGroupMarkerEXT(0, "Drawing Bounding Box");
