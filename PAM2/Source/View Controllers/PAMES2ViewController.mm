@@ -20,6 +20,8 @@
 #include "PAMSettingsManager.h"
 #include "RAPolyLine.h"
 
+#define SHOW_DEBUG_LINES 0
+
 using namespace std;
 using namespace CGLA;
 using namespace PAMMesh;
@@ -57,6 +59,10 @@ using namespace RAEngine;
     vector<Vec3f> polyline1Data;
     RAPolyLine* polyline2;
     vector<Vec3f> polyline2Data;
+    string* vShader;
+    string* fShader;
+    
+    vector<RAPolyLine*> debugPolylines;
 }
 @end
 
@@ -78,10 +84,10 @@ using namespace RAEngine;
     
     polyline1 = new RAPolyLine();
     polyline2 = new RAPolyLine();
-    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-    polyline1->setupShaders(vShader_Cplus, fShader_Cplus);
-    polyline2->setupShaders(vShader_Cplus, fShader_Cplus);
+    vShader = new string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+    fShader = new string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+    polyline1->setupShaders(*vShader, *fShader);
+    polyline2->setupShaders(*vShader, *fShader);
 }
 
 - (void)viewDidUnload
@@ -127,15 +133,15 @@ using namespace RAEngine;
     // Side Rotation
     UIPanGestureRecognizer* oneFingerPanning = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleOneFingerPanGesture:)];
     oneFingerPanning.maximumNumberOfTouches = 1;
-    [view addGestureRecognizer:oneFingerPanning];
+//    [view addGestureRecognizer:oneFingerPanning];
     
     //Rotate along Z-axis
     UIRotationGestureRecognizer* rotationInPlaneOfScreen = [[UIRotationGestureRecognizer alloc] initWithTarget:self action:@selector(handleRotationGesture:)];
-    [view addGestureRecognizer:rotationInPlaneOfScreen];
+//    [view addGestureRecognizer:rotationInPlaneOfScreen];
     
     //Zoom
     UIPinchGestureRecognizer* pinchToZoom = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
-    [view addGestureRecognizer:pinchToZoom];
+//    [view addGestureRecognizer:pinchToZoom];
 
     //Translation
     twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
@@ -147,7 +153,7 @@ using namespace RAEngine;
     UITapGestureRecognizer* tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGestureRecognizer:)];
     tapGesture.numberOfTapsRequired = 1;
     tapGesture.numberOfTouchesRequired = 1;
-    [view addGestureRecognizer:tapGesture];
+//    [view addGestureRecognizer:tapGesture];
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -217,8 +223,6 @@ using namespace RAEngine;
         {
             polyline1Data.clear();
             polyline2Data.clear();
-            polyline1->enabled = true;
-            polyline2->enabled = true;
         }
         
         if (sender.numberOfTouches == 2)
@@ -237,9 +241,14 @@ using namespace RAEngine;
             }
             
             polyline1Data.push_back(rayOrigin1);
-            polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255));
             polyline2Data.push_back(rayOrigin2);
-            polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255));
+            
+            if (polyline1Data.size() > 1 && polyline2Data.size() > 1) {
+                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                polyline1->enabled = true;
+                polyline2->enabled = true;
+            }
         }
 
         if (sender.state == UIGestureRecognizerStateEnded ||
@@ -253,18 +262,46 @@ using namespace RAEngine;
                 delete pamManifold;
             }
             pamManifold = new PAMManifold();
-            pamManifold->setupShaders();
-            pamManifold->createBody(polyline1Data, polyline2Data);
-            pamManifold->bufferVertexDataToGPU();
-            pamManifold->enabled = true;
-            
-            GLfloat zNear = 1.0;
-            GLfloat newOriginZ = -1*(zNear + bounds.radius);
-            GLfloat curOriginZ = bounds.center[2];
-            
-            pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-            
-            [self setupBoundingBox];
+            vector<vector<Vec3f>> debugRibs;
+            if (pamManifold->createBody(polyline1Data, polyline2Data, 0, debugRibs, false))
+            {
+
+                pamManifold->setupShaders();
+                pamManifold->bufferVertexDataToGPU();
+                pamManifold->enabled = true;
+                
+                GLfloat zNear = 1.0;
+                GLfloat newOriginZ = -1*(zNear + bounds.radius);
+                GLfloat curOriginZ = bounds.center[2];
+                
+                pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                
+                [self setupBoundingBox];
+                
+#if SHOW_DEBUG_LINES
+                clearVector(debugPolylines);
+                for (int i = 0; i < debugRibs.size();i++) {
+                    vector<Vec3f> rib = debugRibs[i];
+                    if (rib.size() < 2) {
+                        continue;
+                    }
+                    RAPolyLine* p = new RAPolyLine();
+                    p->setupShaders(*vShader, *fShader);
+                    p->bufferVertexDataToGPU(rib, Vec4uc(0,0,255,255), Vec4uc(0,255,0,255), GL_LINES);
+                    
+                    p->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                    p->enabled = true;
+                    debugPolylines.push_back(p);
+                }
+//                PAMSettingsManager::getInstance().transform = true;
+#endif
+
+            }
+            else
+            {
+                delete pamManifold;
+                pamManifold = nullptr;
+            }
         }
     }
 }
@@ -374,6 +411,14 @@ using namespace RAEngine;
     polyline2->projectionMatrix = projectionMatrix;
     polyline2->viewMatrix = viewMatrix;
     polyline2->draw();
+    
+#if SHOW_DEBUG_LINES
+    for (RAPolyLine* p : debugPolylines) {
+        p->projectionMatrix = projectionMatrix;
+        p->viewMatrix = viewMatrix;
+        p->draw();
+    }
+#endif
 }
 
 #pragma mark - Offscreen buffer
@@ -512,6 +557,15 @@ using namespace RAEngine;
 {
     CGPoint touchPoint = [self scaleTouchPoint:[gesture locationInView:gesture.view] inView:(GLKView*)gesture.view];
     return [self rayOrigin:rayOrigin rayDirection:rayDirection forTouchPoint:touchPoint];
+}
+
+template <class C>
+void clearVector(std::vector<C*>& inputvector)
+{
+    for (int i = 0; i < inputvector.size(); i++) {
+        delete inputvector[i];
+    }
+    inputvector.clear();
 }
 
 

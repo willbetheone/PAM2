@@ -13,7 +13,7 @@
 #include <vector>
 #include "Vec3f.h"
 #include "Vec2f.h"
-
+#include "ArithVecFloat.h"
 namespace RAEngine {
     
     ///returns reduced polyline with equal arcs along the curve
@@ -36,10 +36,17 @@ namespace RAEngine {
                                    float segmentLength);
 
     ///calculate tangents fro given polyline
-    void getTangents3D(std::vector<CGLA::Vec3f>& tangents,
-                     const std::vector<CGLA::Vec3f>& points);
+    template<class T, class V, unsigned int N>
+    void getTangents3D(std::vector<CGLA::ArithVecFloat<T,V,N>>& tangents,
+                       const std::vector<CGLA::ArithVecFloat<T,V,N>>& points);
+
     void getTangents2D(std::vector<CGLA::Vec2f>& tangents,
-                     const std::vector<CGLA::Vec2f>& points);
+                       const std::vector<CGLA::Vec2f>& points);
+    
+    void getTangentsAndNormals2D(std::vector<CGLA::Vec2f>& tangents,
+                                 std::vector<CGLA::Vec2f>& normals,
+                                 const std::vector<CGLA::Vec2f>& points);
+
     
     ///calculate tangents and normals for a given polyline
     void getNormals2D(std::vector<CGLA::Vec2f>& normals,
@@ -53,6 +60,22 @@ namespace RAEngine {
     ///check if 3 points are collinear, using corss product
     bool collinear3D(CGLA::Vec3f p1, CGLA::Vec3f p2, CGLA::Vec3f p3, double epsilone);
     bool collinear2D(CGLA::Vec2f p1, CGLA::Vec2f p2, CGLA::Vec2f p3, double epsilone);
+    
+    bool lineSegmentRayIntersection(CGLA::Vec2f p1, CGLA::Vec2f p2, CGLA::Vec2f q, CGLA::Vec2f s, float& rU);
+    
+    
+    bool getSmoothCurve(const std::vector<CGLA::Vec2f>& input,
+                        std::vector<CGLA::Vec2f>* output,
+                        std::vector<CGLA::Vec2f>* tangents,
+                        std::vector<CGLA::Vec2f>* normals,
+                        float t);
+
+    void laplacianSmoothing(std::vector<CGLA::Vec2f> input,
+                            std::vector<CGLA::Vec2f>& output,
+                            int iter,
+                            float d);
+
+    
 }
 
 #endif /* defined(__PAM2__PolylineUtilities__) */

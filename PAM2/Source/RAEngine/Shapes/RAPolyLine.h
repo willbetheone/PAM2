@@ -18,11 +18,12 @@ namespace RAEngine
     {
     public:
         void setupShaders(const std::string vertexShader, const std::string fragmentShader);
-        void bufferVertexDataToGPU(std::vector<CGLA::Vec3f> points, CGLA::Vec4uc color);
+        void bufferVertexDataToGPU(std::vector<CGLA::Vec3f>& points, CGLA::Vec4uc color, int lineMode);
+        void bufferVertexDataToGPU(std::vector<CGLA::Vec3f>& points, CGLA::Vec4uc color, CGLA::Vec4uc color2, int lineMode);
         Bounds getBoundingBox() const override;
         void draw() const override;
     private:
-
+        int lineMode;
     };
 }
 #endif /* defined(__PAM2__RAPolyLine__) */

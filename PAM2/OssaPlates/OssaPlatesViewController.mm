@@ -283,7 +283,7 @@ using namespace Ossa;
         Vec3f modelCoord;
         if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
             polyline.push_back(modelCoord);
-            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255), GL_LINE_STRIP);
         } else {
             RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
         }
@@ -293,7 +293,7 @@ using namespace Ossa;
         Vec3f modelCoord;
         if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
             polyline.push_back(modelCoord);
-            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255), GL_LINE_STRIP);
         } else {
             RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
         }
@@ -303,7 +303,7 @@ using namespace Ossa;
         Vec3f modelCoord;
         if ([self modelCoordinates:modelCoord forTouchPoint:glTouch depthBuffer:tempDepthBuffer]) {
             polyline.push_back(modelCoord);
-            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255));
+            userDrawnCurve->bufferVertexDataToGPU(polyline, Vec4uc(255,0,0,255), GL_LINE_STRIP);
         } else {
             RA_LOG_ERROR("Couldnt get the correct model coord for touch point");
         }
@@ -330,8 +330,8 @@ using namespace Ossa;
     segSpline->setSampleData(polyline, cntPoint);
     segSpline->getControlPoints(splineControlPoints);
     segSpline->getSpline(splineData);
-    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
-    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
+    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255), GL_LINE_STRIP);
+    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255), GL_LINE_STRIP);
     
     vector<Vec3f> centerSplineData;
     vector<Vec3f> normSplineData;
@@ -375,8 +375,8 @@ using namespace Ossa;
     vector<Vec3f> splineData;
     segSpline->getControlPoints(splineControlPoints);
     segSpline->getSpline(splineData);
-    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255));
-    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255));
+    userDrawnCurveTesselated->bufferVertexDataToGPU(splineControlPoints, Vec4uc(0,255,0,255), GL_LINE_STRIP);
+    plateSpline->bufferVertexDataToGPU(splineData, Vec4uc(0,0,255,255), GL_LINE_STRIP);
     
     vector<Vec3f> centerSplineData;
     vector<Vec3f> normSplineData;

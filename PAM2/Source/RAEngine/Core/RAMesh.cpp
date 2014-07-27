@@ -33,7 +33,7 @@ namespace RAEngine {
     
     RAMesh::~RAMesh()
     {
-        RA_LOG_VERBOSE("Deleting RAMesh");
+     
 
         //Indexed vertex data
         delete positionDataBuffer;

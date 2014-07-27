@@ -8,6 +8,12 @@
 
 #include "RAPolylineUtilities.h"
 #include "RALogManager.h"
+#include "Wm5IntrRay2Segment2.h"
+#include "Wm5BSplineCurveFit.h"
+#include "Wm5BSplineCurve2.h"
+#include <algorithm>
+
+using namespace Wm5;
 
 namespace RAEngine {
     
@@ -129,7 +135,7 @@ namespace RAEngine {
                 //Not AR_len == segmentLength
 
                 if (collinear3D(A_point, B_point, C_point, 1e-5)) { //special case. points are collinear
-                    RA_LOG_INFO("Collinear %i", i);
+//                    RA_LOG_INFO("Collinear %i", i);
                     Vec R_point = segmentLength * normalize(AC_vec) + A_point;
                     reducedPoints.push_back(R_point);
                     A_point = R_point;
@@ -164,8 +170,8 @@ namespace RAEngine {
     }
     
     void reduceLineToEqualSegments2D(std::vector<CGLA::Vec2f>& reducedPoints,
-                                   const std::vector<CGLA::Vec2f>& polylinePoints,
-                                   float segmentLength)
+                                     const std::vector<CGLA::Vec2f>& polylinePoints,
+                                     float segmentLength)
     {
         typedef CGLA::Vec2f Vec;
         typedef float T;
@@ -204,7 +210,7 @@ namespace RAEngine {
                 //Not AR_len == segmentLength
                 
                 if (collinear2D(A_point, B_point, C_point, 1e-5)) { //special case. points are collinear
-                    RA_LOG_INFO("Collinear %i", i);
+//                    RA_LOG_INFO("Collinear %i", i);
                     Vec R_point = segmentLength * normalize(AC_vec) + A_point;
                     reducedPoints.push_back(R_point);
                     A_point = R_point;
@@ -239,15 +245,19 @@ namespace RAEngine {
     }
 
     
-    void getTangents3D(std::vector<CGLA::Vec3f>& tangents,
-                       const std::vector<CGLA::Vec3f>& points)
+    template<class T, class V, unsigned int N>
+    void getTangents3D(std::vector<CGLA::ArithVecFloat<T,V,N>>& tangents,
+                       const std::vector<CGLA::ArithVecFloat<T,V,N>>& points)
     {
+        assert(points.size() > 1);
         for (int i = 0; i < points.size(); i++) {
-            Vec3f t;
-            if (i == points.size() - 1) {
+            CGLA::ArithVecFloat<T,V,N> t;
+            if (i == 0) {
+                t = points[1] - points[0];
+            } else if (i == points.size() - 1) {
                 t = points[i] - points[i-1];
             } else {
-                t = points[i+1] - points[i];
+                t = points[i+1] - points[i-1];
             }
             tangents.push_back(normalize(t));
         }
@@ -256,12 +266,15 @@ namespace RAEngine {
     void getTangents2D(std::vector<CGLA::Vec2f>& tangents,
                        const std::vector<CGLA::Vec2f>& points)
     {
+        assert(points.size() > 1);
         for (int i = 0; i < points.size(); i++) {
             Vec2f t;
-            if (i == points.size() - 1) {
+            if (i == 0) {
+                t = points[1] - points[0];
+            } else if (i == points.size() - 1) {
                 t = points[i] - points[i-1];
             } else {
-                t = points[i+1] - points[i];
+                t = points[i+1] - points[i-1];
             }
             tangents.push_back(normalize(t));
         }
@@ -273,38 +286,32 @@ namespace RAEngine {
     {
         //Get norm vectors
         for (int i = 0; i < skeleton.size(); i++) {
-            if (i == 0) {
-                continue;
-            } else if (i == skeleton.size() - 1) {
-                normals.push_back(normals[skeleton.size() - 2]);
-            } else {
-                Vec2f tangent = tangents[i];
-                Vec2f firstHalf = skeleton[i] - skeleton[i-1];
-                Vec2f proj = project(firstHalf, tangent);
-                
-                Vec2f norm = normalize(proj - firstHalf);
-                
-                //make sure normals point in the same left direction
-                float side = ((tangent[0])*(firstHalf[1]) - (tangent[1])*(firstHalf[0]));
-                if (side == 0) {
-                    float theta = -90 * DEGREES_TO_RADIANS;
-                    float cs = cosf(theta), sn = sinf(theta);
-                    
-                    float px = firstHalf[0] * cs - firstHalf[1] * sn;
-                    float py = firstHalf[0] * sn + firstHalf[1] * cs;
-                    norm = normalize(Vec2f(px, py));
-                    
-                } else if (!(side > 0)) {
-                    norm = -1*norm;
-                }
-                
-                normals.push_back(norm);
-                if (i == 1) {
-                    normals.insert(normals.begin(), normals[0]);
-                }
-            }
+            Vec2f tan = tangents[i];
+            Vec2f norm = Vec2f(tan[1], -1*tan[0]);
+            normals.push_back(norm);
         }
     }
+    
+    void getTangentsAndNormals2D(std::vector<CGLA::Vec2f>& tangents,
+                                 std::vector<CGLA::Vec2f>& normals,
+                                 const std::vector<CGLA::Vec2f>& points)
+    {
+        assert(points.size() > 1);
+        for (int i = 0; i < points.size(); i++) {
+            Vec2f t;
+            if (i == 0) {
+                t = points[1] - points[0];
+            } else if (i == points.size() - 1) {
+                t = points[i] - points[i-1];
+            } else {
+                t = points[i+1] - points[i-1];
+            }
+            Vec2f n = Vec2f(t[1], -1*t[0]);
+            tangents.push_back(normalize(t));
+            normals.push_back(normalize(n));
+        }
+    }
+
     
     void getCenters3D(std::vector<CGLA::Vec3f>& centers,
                     const std::vector<CGLA::Vec3f>& points)
@@ -326,8 +333,119 @@ namespace RAEngine {
         float cros = abs(p1[0] * (p2[1] - p3[1]) + p2[0] * (p3[1] - p1[1]) + p3[0] * (p1[1] - p2[1]))/2;
         return cros <= epsilone;
     }
+    
+    bool lineSegmentRayIntersection(CGLA::Vec2f p1, CGLA::Vec2f p2, CGLA::Vec2f q, CGLA::Vec2f s, float& rU)
+    {
+        Ray2f ray =  Ray2f(Vector2f(q[0], q[1]), Vector2f(s[0], s[1]));
+        Segment2f seg = Segment2f(Vector2f(p1[0], p1[1]), Vector2f(p2[0], p2[1]));
+        
+        IntrRay2Segment2f intr = IntrRay2Segment2f(ray, seg);
+        
+        if (intr.Find()) {
+            if (intr.GetQuantity() == 1) {
+                Vector2f intrPoint = intr.GetPoint(0);
+                Vector2f qWm5 = Vector2f(q[0], q[1]);
+                rU = (intrPoint - qWm5).Length();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    bool getSmoothCurve(const std::vector<CGLA::Vec2f>& input,
+                        std::vector<CGLA::Vec2f>* output,
+                        std::vector<CGLA::Vec2f>* tangents,
+                        std::vector<CGLA::Vec2f>* normals,
+                        float t)
+    {
+        assert(output != nullptr);
+        assert(input.size() >= 5);
+        assert(t > 0);
+        
+        if (input.size() < 5) {
+            RA_LOG_ERROR("Input has less than 4 points");
+            return false;
+        }
+        
+        int degree = 3;
+        int numOfControls = std::max((int)(input.size()/2), 5) ;
+//        int numOfControls = input.size();
+        
+        BSplineCurveFitf fit = BSplineCurveFitf(2, input.size(), (const float*)input.data(), degree, numOfControls);
+        BSplineCurve2f curve = BSplineCurve2f(fit.GetControlQuantity(), (const Vector2f*)fit.GetControlData(), degree, false, true);
+        float length = curve.GetLength(curve.GetMinTime(), curve.GetMaxTime());
+        
+        for (int i = 0; i * t <= length; ++i)
+        {
+            float time  = curve.GetTime(i * t);
+            Vector2f pos, tan, norm;
+            curve.GetFrame(time, pos, tan, norm);
+            
+            output->push_back(Vec2f(pos[0], pos[1]));
 
-
+            if (tangents) {
+                tangents->push_back(Vec2f(tan[0], tan[1]));
+            }
+            if (normals) {
+                normals->push_back(Vec2f(norm[0], norm[1]));
+            }            
+        }
+        
+        return true;
+    }
+    
+    void laplacianSmoothing(std::vector<CGLA::Vec2f> input,
+                            std::vector<CGLA::Vec2f>& output,
+                            int iter,
+                            float d)
+    {
+        output = input;
+        for (int j = 0; j < iter; j++) {
+            for (int i = 1; i < input.size() - 1; i++) {
+                Vec2f lap = 0.5f * (input[i-1] + input[i+1]) - input[i];
+                output[i] = input[i] + d*lap;
+            }
+            input = output;
+        }
+    }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

@@ -45,8 +45,11 @@ namespace PAMMesh
         void buildKDTree();
         
         /* MODELING FUNCTIONS */
-        void createBody(std::vector<CGLA::Vec3f>& polyline1,
-                        std::vector<CGLA::Vec3f>& polyline2);
+        bool createBody(std::vector<CGLA::Vec3f>& polyline1,
+                        std::vector<CGLA::Vec3f>& polyline2,
+                        float zCoord,
+                        std::vector<std::vector<CGLA::Vec3f>>& debugAllRibs,
+                        bool debug);
         
     private:
         Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree = nullptr;
