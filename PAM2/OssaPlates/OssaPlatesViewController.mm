@@ -451,7 +451,6 @@ using namespace Ossa;
 -(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
     
-    
     CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
                                         inView:(GLKView*)sender.view];
     Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
@@ -494,7 +493,7 @@ using namespace Ossa;
     if (objPath) {
         pamManifold->loadObjFile(objPath.UTF8String);
         pamManifold->setupShaders();
-        pamManifold->bufferVertexDataToGPU();
+//        pamManifold->bufferVertexDataToGPU();
         pamManifold->buildKDTree();
         bounds = pamManifold->getBoundingBox();
         

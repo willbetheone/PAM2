@@ -75,6 +75,16 @@ namespace RAEngine {
                             int iter,
                             float d);
 
+    void laplacianSmoothing(std::vector<CGLA::Vec3f> input,
+                            std::vector<CGLA::Vec3f>& output,
+                            int iter,
+                            float d);
+    
+    void normals3D(std::vector<CGLA::Vec3f>& normals,
+                   std::vector<CGLA::Vec3f>& tangents,
+                   std::vector<CGLA::Vec3f>& skeleton);
+    
+    CGLA::Vec3f orthogonalVectorTo(CGLA::Vec3f vector);
     
 }
 

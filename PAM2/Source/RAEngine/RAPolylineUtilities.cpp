@@ -12,6 +12,7 @@
 #include "Wm5BSplineCurveFit.h"
 #include "Wm5BSplineCurve2.h"
 #include <algorithm>
+#include "Quatf.h"
 
 using namespace Wm5;
 
@@ -408,6 +409,72 @@ namespace RAEngine {
             input = output;
         }
     }
+    
+    void laplacianSmoothing(std::vector<CGLA::Vec3f> input,
+                            std::vector<CGLA::Vec3f>& output,
+                            int iter,
+                            float d)
+    {
+        output = input;
+        for (int j = 0; j < iter; j++) {
+            for (int i = 1; i < input.size() - 1; i++) {
+                Vec3f lap = 0.5f * (input[i-1] + input[i+1]) - input[i];
+                output[i] = input[i] + d*lap;
+            }
+            input = output;
+        }
+    }
+    
+    void normals3D(std::vector<CGLA::Vec3f>& normals,
+                   std::vector<CGLA::Vec3f>& tangents,
+                   std::vector<CGLA::Vec3f>& skeleton)
+    {
+        for (int i = 0; i < skeleton.size(); i++) {
+            Vec3f t;
+            if (i == 0) {
+                t = skeleton[1]-skeleton[0];
+            } else if (i == (skeleton.size() - 1)) {
+                t = skeleton[i]-skeleton[i-1];
+            } else {
+                Vec3f v1 = skeleton[i]-skeleton[i-1];
+                Vec3f v2 = skeleton[i+1]-skeleton[i];
+                t = 0.5f*(v1+v2);
+            }
+            tangents.push_back(normalize(t));
+        }
+        
+        Vec3f lastTangent = tangents[0];
+        Vec3f lastNorm = orthogonalVectorTo(tangents[0]);
+        
+        for (int i = 0; i < skeleton.size(); i++) {
+            Vec3f tangent = tangents[i];
+            Quatf q;
+            q.make_rot(lastTangent, tangent);
+            Vec3f curNorm = q.apply(lastNorm);
+            Vec3f curNormGLK = normalize(curNorm);
+            normals.push_back(curNormGLK);
+            lastTangent = tangent;
+            lastNorm = curNorm;
+        }
+    }
+    
+    CGLA::Vec3f orthogonalVectorTo(CGLA::Vec3f vector)
+    {
+        float x = 1;
+        float y = 1;
+        float z;
+        if (vector[2] == 0) {
+            x = 0;
+            y = 0;
+            z = 1;
+        } else {
+            z = (vector[0]*x + vector[1]*y) / -vector[2];
+        }
+        
+        Vec3f orthoVector = normalize(Vec3f(x, y, z));
+        return orthoVector;
+    }
+
 }
 
 

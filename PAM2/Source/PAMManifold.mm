@@ -13,10 +13,15 @@
 #include <GLKit/GLKMath.h>
 #include <limits.h>
 #include "../HMesh/obj_load.h"
-#include <map>
 #include "RAPolylineUtilities.h"
 #include "Quatf.h"
 #include "PAMUtilities.h"
+#include "polarize.h"
+#include "Mat3x3d.h"
+#include "eigensolution.h"
+#include "ArithMatFloat.h"
+#include "PAMSettingsManager.h"
+#include <queue>
 
 #define kCENTROID_STEP 0.025f
 
@@ -27,10 +32,14 @@ namespace PAMMesh
     using namespace CGLA;
     using namespace std;
     using namespace Geometry;
-
     
 #pragma mark - CONSTRUCTOR/DESTRUCTOR
-    PAMManifold::PAMManifold() : HMesh::Manifold() {}
+    PAMManifold::PAMManifold() : HMesh::Manifold()
+    {
+        kdTree = nullptr;
+        modState = Modification::NONE;
+    }
+    
     PAMManifold::~PAMManifold()
     {
         delete kdTree;
@@ -43,6 +52,8 @@ namespace PAMMesh
             RA_LOG_ERROR("Failed to load obj file %s", path);
             return 0;
         }
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
         return 1;
     }
     
@@ -153,29 +164,17 @@ namespace PAMMesh
         delete wireframeIndicies;
     }
     
-//    void PAMManifold::normalizeVertexCoordinates()
-//    {
-//        //Calculate Bounding Box
-//        Vec3d pmin;
-//        Vec3d pmax;
-//        HMesh::bbox(*this, pmin, pmax);
-//        
-//        Vec3d midV = 0.5 * (pmax - pmin);
-//        float rad = midV.length();
-//        
-//        for (VertexID vID: this->vertices()) {
-//            Vec3d pos = this->pos(vID);
-//            Vec3d newPos = (pos - pmin - midV) / rad;
-//            this->pos(vID) = newPos;
-//        }
-//    }
+    void PAMManifold::traceEdgeInfo()
+    {
+        edgeInfo = trace_spine_edges(*this);
+    }
     
     void PAMManifold::getVertexData(CGLA::Vec3f*& vertexPositions,
                                     CGLA::Vec3f*& vertexNormals,
                                     CGLA::Vec4uc*& vertexColors,
                                     std::vector<unsigned int>*& indicies,
                                     CGLA::Vec4uc*& wireframeColor,
-                                    std::vector<unsigned int>*& wireframeIndicies) const
+                                    std::vector<unsigned int>*& wireframeIndicies)
     {
         Vec4uc color(200,200,200,255);
         Vec4uc wcolor(180,180,180,255);
@@ -189,7 +188,7 @@ namespace PAMMesh
         wireframeIndicies = new vector<unsigned int>();
         
         // when interating through faces we need to map VertexID to index
-        std::map<VertexID, int>* vertexIDtoIndex = new std::map<VertexID, int>();
+        vertexIDtoIndex = std::map<HMesh::VertexID, int>();
         
         int i = 0;
         for (VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid, ++i) {
@@ -197,7 +196,7 @@ namespace PAMMesh
             vertexNormals[i] = HMesh::normalf(*this, *vid);
             vertexColors[i] = color;
             wireframeColor[i] = wcolor;
-            (*vertexIDtoIndex)[*vid] = i;
+            vertexIDtoIndex[*vid] = i;
         }
         
         for (FaceIDIterator fid = faces_begin(); fid != faces_end(); ++fid) {
@@ -209,7 +208,7 @@ namespace PAMMesh
                 //add vertex to the data array
                 VertexID vID = w.vertex();
 //                unsigned int index = vID.index;
-                unsigned int index = (*vertexIDtoIndex)[vID];
+                unsigned int index = vertexIDtoIndex[vID];
                 assert(index < no_vertices());
                 facet[vertexNum] = index;
                 vertexNum++;
@@ -246,7 +245,7 @@ namespace PAMMesh
             }
         }
         
-        delete vertexIDtoIndex;
+//        delete vertexIDtoIndex;
     }
     
     bool PAMManifold::normal(const CGLA::Vec3f& point, CGLA::Vec3f& norm)
@@ -261,24 +260,26 @@ namespace PAMMesh
     
     bool PAMManifold::closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
     {
-        if (kdTree != nullptr) {
+        if (kdTree != nullptr)
+        {
             Vec3f coord;
             Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
-            float max = 0.1;
+            float max = 0.1; //TODO
             if (kdTree->closest_point(pointModel, max, coord, vid)){
                 return true;
             }
             return false;
-        } else {
-            //iterate over every face
-            float distance = FLT_MAX;
-            HMesh::VertexID closestVertex;
-            Vec3f pointModel = Vec3f(invert_affine(getModelMatrix()) * Vec4f(point));
-            
-            if (no_vertices()==0) {
+        }
+        else
+        {
+            if (no_vertices() == 0) {
                 return false;
             }
 
+            //iterate over every face
+            float distance = FLT_MAX;
+            Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
+            
             for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
             {
                 Vec3f vertexPos = posf(*vID);
@@ -292,13 +293,95 @@ namespace PAMMesh
         }
     }
     
+    bool PAMManifold::closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
+    {
+        if (no_vertices() == 0) {
+            return false;
+        }
+        
+        float distance = FLT_MAX;
+        
+        //touchPoint to world coordinates
+        Vec3f touchPoint = viewMatrix.mul_3D_point(point);
+        Vec2f touchPoint2D = Vec2f(touchPoint[0], touchPoint[1]);
+        
+        for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
+        {
+            Vec3f vertexPos = posf(*vID);
+            Vec3f glkVertextPosModelView = getModelViewMatrix().mul_3D_point(vertexPos);
+            Vec2f glkVertextPosModelView_2 = Vec2f(glkVertextPosModelView[0], glkVertextPosModelView[1]);
+            float cur_distance = length(touchPoint2D - glkVertextPosModelView_2);
+            
+            if (cur_distance < distance) {
+                distance = cur_distance;
+                vid = *vID;
+            }
+        }
+        return true;
+    }
+    
     void PAMManifold::buildKDTree()
     {
+        if (kdTree != nullptr) {
+            delete kdTree;
+        }
         kdTree = new KDTree<Vec3f, VertexID>();
         for(VertexIDIterator vid = vertices_begin(); vid != vertices_end(); ++vid) {
             kdTree->insert(posf(*vid), *vid);
         }
         kdTree->build();
+    }
+    
+    void PAMManifold::updateMesh()
+    {
+        if (modState == Modification::SCULPTING_SCALING)
+        {
+            for (int i = 0; i < _edges_to_scale.size(); i ++) {
+                scaled_pos_for_rib(*this,
+                                   _edges_to_scale[i],
+                                   _centroids[i],
+                                   edgeInfo,
+                                   1 + (_scaleFactor - 1)*_scale_weight_vector[i],
+                                   _current_scale_position);
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _sculpt_verticies_to_scale) {
+                Vec3f pos = _current_scale_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+        }
+        else if (modState == Modification::SCULPTING_ANISOTROPIC_SCALING)
+        {
+            for (int i = 0; i < _edges_to_scale.size(); i ++)
+            {
+                HalfEdgeID ribID = _edges_to_scale[i];
+                float scale =   1 + (_scaleFactor - 1)*_scale_weight_vector[i];
+                for (Walker w = walker(ribID); !w.full_circle(); w = w.next().opp().next()) {
+                    VertexID vID = w.vertex();
+                    Vec3f proj = _anisotropic_projections[vID];
+                    Vec3f newPos = posf(vID) + (scale - 1) * proj;
+                    _current_scale_position[w.vertex()] = newPos;
+                }
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _sculpt_verticies_to_scale) {
+                Vec3f pos = _current_scale_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+        }
+
     }
     
     void PAMManifold::draw() const
@@ -338,9 +421,9 @@ namespace PAMMesh
 
         glLineWidth(2.0f);
         glDisable(GL_POLYGON_OFFSET_FILL);
+        
         wireframeIndexBuffer->bind();
         wireframeIndexBuffer->drawPreparedArraysIndicies(GL_LINES, GL_UNSIGNED_INT, numWireframeIndicies);
-
         
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
@@ -350,7 +433,8 @@ namespace PAMMesh
     
     void PAMManifold::drawToDepthBuffer() 
     {
-        if (depthShaderProgram == nullptr) {
+        if (depthShaderProgram == nullptr)
+        {
             std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"DepthShader" ofType:@"vsh"].UTF8String);
             std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"DepthShader" ofType:@"fsh"].UTF8String);
             
@@ -381,7 +465,7 @@ namespace PAMMesh
         glPopGroupMarkerEXT();
     }
 
-#pragma mark - MODELING FUNCTIONS
+#pragma mark - BODY CREATION
     
     bool PAMManifold::createBody(std::vector<CGLA::Vec3f>& polyline1,
                                  std::vector<CGLA::Vec3f>& polyline2,
@@ -531,6 +615,8 @@ namespace PAMMesh
         }
         
         populateManifold(allRibs);
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
         return true;
     }
 
@@ -638,4 +724,851 @@ namespace PAMMesh
         }
     }
 
+#pragma mark - BRANCH CREATION
+    
+    void PAMManifold::endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
+                                            CGLA::Vec3f firstPoint,
+                                            bool touchedModelStart,
+                                            bool shouldStick,
+                                            float touchSize)
+                                            
+    {
+        VertexID touchedVID;
+        if (touchedModelStart) {
+            closestVertexID_3D(firstPoint, touchedVID);
+        } else {
+            closestVertexID_2D(firstPoint, touchedVID);
+        }
+        
+        if (touchPoints.size() < 6) {
+            RA_LOG_WARN("Not enough points");
+            return;
+        }
+        
+        //convert touch points to world space
+        for_each(touchPoints.begin(), touchPoints.end(), [&](Vec3f &v){ v = viewMatrix.mul_3D_point(v);});
+
+        //Get skeleton aka joint points
+        vector<Vec3f> rawSkeleton;
+        float c_step = length(viewMatrix.mul_3D_vector(Vec3f(3*kCENTROID_STEP,0,0)));
+        reduceLineToEqualSegments3D(rawSkeleton, touchPoints, c_step);
+        if (rawSkeleton.size() < 4) {
+            RA_LOG_WARN("Not enough controids");
+            return;
+        }
+
+        //Create new pole
+        VertexID newPoleID;
+        float bWidth;
+        Vec3f holeCenter, holeNorm;
+        HalfEdgeID boundaryHalfEdge;
+        
+        int limbWidth = branchWidthForAngle(40*DEGREES_TO_RADIANS, touchedVID);
+        if (limbWidth <= 1 ) {
+            return;
+        }
+        RA_LOG_INFO("Limb Width: %i", limbWidth);
+        
+//        [self saveState]; //TODO add save state
+        bool result = createHoleAtVertex(touchedVID,
+                                         limbWidth,
+                                         newPoleID,
+                                         bWidth,
+                                         holeCenter,
+                                         holeNorm,
+                                         boundaryHalfEdge);
+        
+        if (!result) {
+//            [self undo];
+            return;
+        }
+        
+        //closest to the first centroid between two fingers vertex in 2D space
+        Vec3f touchedV_world = getModelViewMatrix().mul_3D_point(holeCenter);
+        float zValueTouched = touchedV_world[2];
+        //add depth to skeleton points. Interpolate if needed
+        for_each(rawSkeleton.begin(), rawSkeleton.end(), [&](Vec3f &v){v = Vec3f(v[0], v[1], zValueTouched);});
+        
+        //Smooth
+        vector<Vec3f> skeleton;
+        laplacianSmoothing(rawSkeleton, skeleton, 3, 0.5);
+        
+        //Skeleton should start from the branch point
+        Vec3f translate = touchedV_world - skeleton[0];
+        for_each(skeleton.begin(), skeleton.end(), [&](Vec3f &v){v += translate;});
+        
+        //Length
+        float totalLength = 0;
+        Vec3f lastSkelet = skeleton[0];
+        for (int i = 1; i < skeleton.size(); i++) {
+            totalLength += length(lastSkelet - skeleton[i]);
+            lastSkelet = skeleton[i];
+        }
+        
+        float deformLength = 0.1f * totalLength;
+        int deformIndex = 0;
+        totalLength = 0;
+        lastSkelet = skeleton[0];
+        
+        for (int i = 1; i < skeleton.size(); i++) {
+            totalLength += length(lastSkelet - skeleton[i]);
+            lastSkelet = skeleton[i];
+            if (totalLength > deformLength) {
+                deformIndex = i + 1;
+                break;
+            }
+        }
+        
+        //Move branch by weighted norm
+        Vec3f holeNormWorld = normalize(getModelViewMatrix().mul_3D_vector(holeNorm));
+        holeNormWorld = deformLength*holeNormWorld;
+        for (int i = 0; i < skeleton.size(); i++) {
+            if (i < deformIndex) {
+                float x = (float)i/(float)deformIndex;
+                float weight = sqrt(x);
+                skeleton[i] = skeleton[i] + weight*holeNormWorld;
+            } else {
+                skeleton[i] = skeleton[i] + holeNormWorld;
+            }
+        }
+        
+        //Get norm vectors for skeleton joints
+        vector<Vec3f> skeletonTangents;
+        vector<Vec3f> skeletonNormals;
+        normals3D(skeletonNormals, skeletonTangents,skeleton);
+        
+        //Parse new skeleton and create ribs
+        //Ingore first and last centroids since they are poles
+        int numSpines = limbWidth*2;
+        vector<vector<Vec3f>> allRibs(skeleton.size());
+        vector<Vec3f> skeletonModel;
+        vector<Vec3f> skeletonNormalsModel;
+        
+        Mat4x4f modelViewMatrix = getModelViewMatrix();
+        Mat4x4f invertModelViewMatrix = invert_affine(modelViewMatrix);
+        
+        for (int i = 0; i < skeleton.size(); i++) {
+            Vec3f sModel = invertModelViewMatrix.mul_3D_point(skeleton[i]);
+            float ribWidth = bWidth;
+            Vec3f nModel = invertModelViewMatrix.mul_3D_vector(skeletonNormals[i]);
+            Vec3f tModel = invertModelViewMatrix.mul_3D_vector(skeletonTangents[i]);
+            tModel = ribWidth*normalize(tModel);
+            nModel = ribWidth*normalize(nModel);
+            
+            skeletonModel.push_back(sModel);
+            
+            //        vector<GLKVector3>norm;
+            //        norm.push_back(sModel);
+            //        norm.push_back(GLKVector3Add(sModel, nModel));
+            //        allRibs.push_back(norm);
+            //
+            //        vector<GLKVector3>tangent;
+            //        tangent.push_back(sModel);
+            //        tangent.push_back(GLKVector3Add(sModel, tModel));
+            //        allRibs.push_back(tangent);
+            
+            if (i == skeleton.size() - 1) {
+                vector<Vec3f> secondPole;
+                secondPole.push_back(sModel);
+                allRibs[i] = secondPole;
+            } else {
+                vector<Vec3f> ribs(numSpines);
+                float rot_step = 360.0f/numSpines;
+                Mat4x4f toOrigin = translation_Mat4x4f(-1*sModel);
+                Mat4x4f fromOrigin = translation_Mat4x4f(sModel);
+                
+                for (int j = 0; j < numSpines; j++) {
+                    float angle = j * rot_step;
+                    
+                    Mat4x4f rotMatrix = rotation_Mat4x4f(tModel, -1*angle*DEGREES_TO_RADIANS);
+                    Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+                    
+                    Vec3f startPosition = sModel + nModel;
+                    startPosition =  tMatrix.mul_3D_point(startPosition);
+                    ribs[j] = startPosition;
+                }
+                allRibs[i] = ribs;
+            }
+        }
+        
+        vector<Vec3f> newLimbVerticies;
+        vector<int>  newLimbFaces;
+        vector<int> newLimbIndices;
+        populateNewLimb(allRibs,newLimbVerticies,newLimbFaces,newLimbIndices);
+        
+        assert(newLimbVerticies.size() != 0);
+        assert(newLimbFaces.size() != 0);
+        assert(newLimbIndices.size() != 0);
+        
+        FaceIDIterator lastFace = faces_end();
+        build(newLimbVerticies.size(),
+              reinterpret_cast<float*>(&newLimbVerticies[0]),
+              newLimbFaces.size(),
+              &newLimbFaces[0],
+              &newLimbIndices[0]);
+        
+        lastFace++;
+        Walker w = walker(*lastFace);
+        
+        vector<HalfEdgeID> newEdges;
+        vector<VertexID> newVerticies;
+        allVerticiesAndHalfEdges(newVerticies,newEdges,w.vertex());
+        
+        HalfEdgeID newBranchLowerRibEdge;
+        if (!boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges)) {
+//            [self undo];
+            return;
+        }
+        
+        Walker lowerBoundaryWalker = walker(newBranchLowerRibEdge);
+        HalfEdgeID newBranchUpperRibEdge = lowerBoundaryWalker.opp().halfedge();
+        stitchBranchToBody(boundaryHalfEdge,newBranchLowerRibEdge);
+        
+//        //smooth at the bottom
+//        float smoothinCoefficient = PAMSettingsManager::getInstance().smoothingBrushSize;
+//        int iterations = PAMSettingsManager::getInstance().baseSmoothingIterations;
+//        traceEdgeInfo();
+//
+//        float radius = rib_radius(*this, newBranchUpperRibEdge, edgeInfo);
+//        set<VertexID> affectedVerticies;
+//        if (!PAMSettingsManager::getInstance().spineSmoothing) {
+//            affectedVerticies = [self smoothAlongRib:newBranchUpperRibEdge iter:iterations isSpine:NO brushSize:smoothinCoefficient*radius edgeInfo:_edgeInfo];
+//        } else {
+//            affectedVerticies = [self smoothAlongRib:newBranchUpperRibEdge iter:iterations isSpine:YES brushSize:smoothinCoefficient*radius edgeInfo:_edgeInfo];
+//        }
+        
+
+//        
+//        //smooth at the pole if needed
+//        if ([SettingsManager sharedInstance].poleSmoothing) {
+//            for (VertexID vID: newVerticies) {
+//                if (is_pole(_manifold, vID)) {
+//                    Walker wBaseEnd = _manifold.walker(vID);
+//                    HalfEdgeID pole_rib = wBaseEnd.next().halfedge();
+//                    float radius = rib_radius(_manifold, pole_rib, _edgeInfo);
+//                    vector<HMesh::VertexID> verticiesToSmooth;
+//                    for (Walker w = _manifold.walker(pole_rib); !w.full_circle(); w = w.next().opp().next()) {
+//                        verticiesToSmooth.push_back(w.vertex());
+//                    }
+//                    verticiesToSmooth.push_back(vID);
+//                    [self smoothVerticies:verticiesToSmooth iter:7 isSpine:YES brushSize:radius edgeInfo:_edgeInfo];
+//                    break;
+//                }
+//            }
+//        }
+        
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
+//        [self rebufferWithCleanup:YES bufferData:YES edgeTrace:YES];
+    }
+    
+    int PAMManifold::branchWidthForAngle(float angle, HMesh::VertexID vID)
+    {
+        
+        Walker walker = this->walker(vID);
+        if (edgeInfo[walker.halfedge()].is_spine()) {
+            walker = walker.opp().next();
+        }
+        assert(edgeInfo[walker.halfedge()].is_rib());
+        
+        Vec3f centr = centroid_for_rib(*this, walker.halfedge(), edgeInfo);
+        Vec3f v1 = posf(vID) - centr;
+        
+        float cur_angle = 0;
+        int width = 0;
+        while (cur_angle < angle/2) {
+            Vec3f v2 = posf(walker.vertex()) - centr;
+            float dotP = dot(normalize(v1), normalize(v2));
+            cur_angle = acos(dotP);
+            width += 1;
+            walker = walker.next().opp().next();
+        }
+        
+        return 2*width + 1;
+    }
+    
+    bool PAMManifold::createHoleAtVertex(HMesh::VertexID vID,
+                                         int width,
+                                         HMesh::VertexID& newPoleID,
+                                         float& bWidth,
+                                         CGLA::Vec3f& holeCenter,
+                                         CGLA::Vec3f& holeNorm,
+                                         HMesh::HalfEdgeID& boundayHalfEdge)
+    {
+        bool result = createBranchAtVertex(vID,width,newPoleID,bWidth);
+        if (result) {
+            holeCenter  = posf(newPoleID);
+            holeNorm  = normalf(*this, newPoleID);
+
+            Walker w = this->walker(newPoleID);
+            w = w.next();
+            boundayHalfEdge = w.halfedge();
+            
+            RA_LOG_INFO("%i", valency(*this, w.vertex()));
+            this->remove_vertex(newPoleID);
+            
+            return true;
+        }
+        return false;
+    }
+    
+    bool PAMManifold::createBranchAtVertex(HMesh::VertexID vID,
+                                           int numOfSegments,
+                                           HMesh::VertexID& newPoleID,
+                                           float& bWidth)
+    {
+        //Do not add branhes at poles
+        if (is_pole(*this, vID)) {
+            RA_LOG_WARN("Tried to create a branch at a pole");
+            return false;
+        }
+        
+        if (valency(*this, vID) > 4) {
+            RA_LOG_WARN("Tried to create a branch at a rib junction");
+            return false;
+        }
+        
+        int leftWidth;
+        int rightWidth;
+        if (numOfSegments%2 != 0) {
+            leftWidth = numOfSegments/2;
+            rightWidth = numOfSegments/2 + 1;
+        } else {
+            leftWidth = numOfSegments/2;
+            rightWidth = numOfSegments/2;
+        }
+        
+        //Find rib halfedge that points to a given vertex
+        Walker walker = this->walker(vID).opp();
+        if (edgeInfo[walker.halfedge()].edge_type == SPINE) {
+            walker = walker.next().opp();
+        }
+        assert(edgeInfo[walker.halfedge()].is_rib()); //its a rib
+        assert(walker.vertex() == vID); //points to a given vertex
+        
+        //Check that rib ring has enough verticeis to accomodate branch width
+        int num_of_rib_verticies = 0;
+        for (Walker ribWalker = this->walker(walker.halfedge());
+             !ribWalker.full_circle();
+             ribWalker = ribWalker.next().opp().next(), num_of_rib_verticies++);
+        
+        if (num_of_rib_verticies < numOfSegments) {
+            RA_LOG_WARN("Not enough points to create branh");
+            return NO;
+        }
+        
+        VertexAttributeVector<int> vs(no_vertices(), 0);
+        vs[vID] = 1;
+        
+        vector<VertexID> ribs;
+        
+        //walk right
+        int num_rib_found = 0;
+        for (Walker ribWalker = walker.next().opp().next();
+             num_rib_found < leftWidth;
+             ribWalker = ribWalker.next().opp().next(), num_rib_found++)
+        {
+            ribs.push_back(ribWalker.vertex());
+        }
+        
+        //walk left
+        num_rib_found = 0;
+        for (Walker ribWalker = walker.opp();
+             num_rib_found < rightWidth;
+             ribWalker = ribWalker.next().opp().next(), num_rib_found++)
+        {
+            ribs.push_back(ribWalker.vertex());
+        }
+        
+        //Set all verticies to be branched out
+        for (int i = 0; i < ribs.size(); i++) {
+            VertexID cur_vID = ribs[i];
+            vs[cur_vID] = 1;
+        }
+        
+        newPoleID = polar_add_branch(*this, vs);
+        refine_branch(*this, newPoleID, bWidth);
+        
+        return YES;
+    }
+    
+    void PAMManifold::populateNewLimb(std::vector<std::vector<CGLA::Vec3f>>& allRibs,
+                                      std::vector<CGLA::Vec3f>& vertices,
+                                      std::vector<int>& faces,
+                                      std::vector<int>& indices)
+    {
+    
+        Vec3f poleVec;
+        
+        //Add all verticies
+        for (int i = 0; i < allRibs.size(); i++) {
+            vector<Vec3f> rib = allRibs[i];
+            for (int j = 0; j < rib.size(); j++) {
+                Vec3f v = rib[j];
+                vertices.push_back(v);
+            }
+        }
+        
+        for (int i = 0; i < allRibs.size() - 1; i++) {
+            if (i == allRibs.size() - 2) { //pole 2
+                vector<Vec3f> pole = allRibs[i+1];
+                vector<Vec3f> rib = allRibs[i];
+                int poleIndex = limbIndexForCentroid(i+1,0,allRibs.size(),rib.size());
+//                Vec3f pV = vertices[poleIndex];
+//                poleVec = Vec3f(pV[0], pV[1], pV[2]);
+                
+                for (int j = 0; j < rib.size(); j++) {
+                    indices.push_back(poleIndex);
+                    if (j == rib.size() - 1) {
+                        int index1 = limbIndexForCentroid(i,j,allRibs.size(),rib.size());
+                        int index2 = limbIndexForCentroid(i,0,allRibs.size(),rib.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                    } else {
+                        int index1 = limbIndexForCentroid(i,j,allRibs.size(),rib.size());
+                        int index2 = limbIndexForCentroid(i,j+1,allRibs.size(),rib.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                    }
+                    faces.push_back(3);
+                }
+            } else {
+                vector<Vec3f> rib1 = allRibs[i];
+                vector<Vec3f> rib2 = allRibs[i+1];
+                
+                for (int j = 0; j < rib1.size(); j++) {
+                    if (j == rib1.size() - 1) {
+                        int index1 = limbIndexForCentroid(i,j,allRibs.size(),rib1.size());
+                        int index2 = limbIndexForCentroid(i,0,allRibs.size(),rib1.size());
+                        int index3 = limbIndexForCentroid(i+1,0,allRibs.size(),rib1.size());
+                        int index4 = limbIndexForCentroid(i+1,j,allRibs.size(),rib1.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                        indices.push_back(index3);
+                        indices.push_back(index4);
+                    } else {
+                        int index1 = limbIndexForCentroid(i,j,allRibs.size(),rib1.size());
+                        int index2 = limbIndexForCentroid(i,j+1,allRibs.size(),rib1.size());
+                        int index3 = limbIndexForCentroid(i+1, j+1,allRibs.size(),rib1.size());
+                        int index4 = limbIndexForCentroid(i+1, j,allRibs.size(),rib1.size());
+                        indices.push_back(index1);
+                        indices.push_back(index2);
+                        indices.push_back(index3);
+                        indices.push_back(index4);
+                    }
+                    faces.push_back(4);
+                
+                }
+            
+            }
+        }
+    }
+    
+    int PAMManifold::limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib)
+    {
+        if (centeroid == totalCentroid - 1) {
+            return (totalCentroid - 1)*totalRib + 1 - 1;
+        } else {
+            return centeroid*totalRib + rib;
+        }
+    }
+
+
+    void PAMManifold::allVerticiesAndHalfEdges(std::vector<HMesh::VertexID>& verticies,
+                                               std::vector<HMesh::HalfEdgeID>& halfedges,
+                                               HMesh::VertexID vID)
+    {
+        //Flood rotational area
+        HalfEdgeAttributeVector<EdgeInfo> sEdgeInfo(this->allocated_halfedges());
+        queue<HalfEdgeID> hq;
+        
+        set<HalfEdgeID> floodEdgesSet;
+        circulate_vertex_ccw(*this, vID, [&](Walker w) {
+            sEdgeInfo[w.halfedge()] = EdgeInfo(SPINE, 0);
+            sEdgeInfo[w.opp().halfedge()] = EdgeInfo(SPINE, 0);
+            floodEdgesSet.insert(w.halfedge());
+            floodEdgesSet.insert(w.opp().halfedge());
+            hq.push(w.opp().halfedge());
+        });
+        
+        set<VertexID> floodVerticiesSet;
+        floodVerticiesSet.insert(vID);
+        while(!hq.empty())
+        {
+            HalfEdgeID h = hq.front();
+            Walker w = walker(h);
+            hq.pop();
+            bool is_spine = edgeInfo[h].edge_type == SPINE;
+            for (;!w.full_circle(); w=w.circulate_vertex_ccw(),is_spine = !is_spine) {
+                if(sEdgeInfo[w.halfedge()].edge_type == UNKNOWN)
+                {
+                    EdgeInfo ei = is_spine ? EdgeInfo(SPINE,0) : EdgeInfo(RIB,0);
+                    
+                    floodVerticiesSet.insert(w.vertex());
+                    floodVerticiesSet.insert(w.opp().vertex());
+                    
+                    floodEdgesSet.insert(w.halfedge());
+                    floodEdgesSet.insert(w.opp().halfedge());
+                    
+                    sEdgeInfo[w.halfedge()] = ei;
+                    sEdgeInfo[w.opp().halfedge()] = ei;
+                    
+                    hq.push(w.opp().halfedge());
+                }
+            }
+        }
+        
+        vector<VertexID> floodVerticiesVector(floodVerticiesSet.begin(), floodVerticiesSet.end());
+        verticies = floodVerticiesVector;
+        
+        vector<HalfEdgeID> floodEdgesVector(floodEdgesSet.begin(), floodEdgesSet.end());
+        halfedges = floodEdgesVector;
+    }
+    
+    bool PAMManifold::boundaryHalfEdgeForClonedMesh(HMesh::HalfEdgeID& boundaryHalfedge,
+                                                    std::vector<HMesh::HalfEdgeID>& newHalfEdges)
+    {
+        for (HalfEdgeID hID: newHalfEdges) {
+            Walker w = walker(hID);
+            if (w.face() == InvalidFaceID) {
+                boundaryHalfedge = w.halfedge();
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    void PAMManifold::stitchBranchToBody(HMesh::HalfEdgeID branchHID,HMesh::HalfEdgeID bodyHID)
+    {
+        //Align edges
+        Walker align1 = walker(branchHID);
+        Vec branchCenter = 0.5*(pos(align1.vertex()) + pos(align1.opp().vertex()));
+        
+        HalfEdgeID closestHID;
+        float closestDist = FLT_MAX;
+        for (Walker align2 = walker(bodyHID); !align2.next().full_circle(); align2 = align2.next()) {
+            Vec bodyCenter = 0.5*(pos(align2.vertex()) + pos(align2.opp().vertex()));
+            float cur_dist = (bodyCenter - branchCenter).length();
+            
+            if (cur_dist < closestDist) {
+                closestDist = cur_dist;
+                closestHID = align2.halfedge();
+            }
+        }
+        
+        //Stich boundary edges
+        vector<HalfEdgeID> bEdges1;
+        vector<HalfEdgeID> bEdges2;
+        for (Walker stitch1 = walker(closestHID);!stitch1.full_circle(); stitch1 = stitch1.next())
+        {
+            bEdges1.push_back(stitch1.halfedge());
+        }
+        bEdges1.pop_back();
+        
+        for (Walker stitch2 = walker(branchHID); !stitch2.full_circle(); stitch2 = stitch2.prev()) {
+            bEdges2.push_back(stitch2.halfedge());
+        }
+        bEdges2.pop_back();
+        
+        assert(bEdges1.size() == bEdges2.size());
+        for (int i = 0; i < bEdges1.size() ; i++) {
+            bool didStich = stitch_boundary_edges(bEdges1[i], bEdges2[i]);
+            assert(didStich);
+        }
+    }
+
+
+    
+#pragma mark - RIB SCALING
+    void PAMManifold::startScalingSingleRib(CGLA::Vec3f touchPoint,
+                                            bool secondPointOnTheModel,
+                                            float scale,
+                                            float velocity,
+                                            float touchSize,
+                                            bool anisotropic)
+    {
+        
+        VertexID vID;
+        closestVertexID_2D(touchPoint, vID);
+        //    if ([SettingsManager sharedInstance].sculptScalingType == SilhouetteScaling) {
+        //        vID = [self closestVertexID_2D:touchPoint];
+        //    } else {
+        ////        GLKVector3 middlePoint = GLKVector3Lerp(touchPoint1, touchPoint2, 0.5f);
+        //        vID = [self closestVertexID_2D:touchPoint];
+        //    }
+        
+        if (is_pole(*this, vID)) {
+            return;
+        }
+        
+        Walker ribWalker = walker(vID).opp();
+        if (edgeInfo[ribWalker.halfedge()].is_spine()) {
+            ribWalker = ribWalker.next().opp();
+        }
+        assert(edgeInfo[ribWalker.halfedge()].is_rib());
+        assert(ribWalker.vertex() == vID);
+        
+        _edges_to_scale.clear();
+        _sculpt_verticies_to_scale.clear();
+        
+        Walker upWalker = walker(ribWalker.next().halfedge());
+        Walker downWalker = walker(ribWalker.opp().prev().opp().halfedge());
+        assert(upWalker.opp().vertex() == downWalker.opp().vertex());
+        
+        Vec3f origin = posf(vID);
+        float brushSize = touchSize;
+        vector<float> allDistances;
+        vector<Vec3f> silhouette_Verticies;
+        vector<VertexID> vector_vid;
+        vector<vector<VertexID>> verticies_along_ribs;
+        float distance = (origin - posf(upWalker.vertex())).length();
+        while (distance <= brushSize)
+        {
+            if (is_pole(*this, upWalker.vertex())) {
+                break;
+            }
+            HalfEdgeID ribID = upWalker.next().halfedge();
+            _edges_to_scale.push_back(ribID);
+            vector_vid = verticies_along_the_rib(*this, ribID, edgeInfo);
+            verticies_along_ribs.push_back(vector_vid);
+            _sculpt_verticies_to_scale.insert(_sculpt_verticies_to_scale.end(), vector_vid.begin(), vector_vid.end());
+            allDistances.push_back(distance);
+            Vec3f silhouette = posf(upWalker.vertex());
+            silhouette_Verticies.push_back(silhouette);
+            
+            upWalker = upWalker.next().opp().next();
+            distance = (origin - posf(upWalker.vertex())).length();
+        }
+        
+        HalfEdgeID ribID = ribWalker.halfedge();
+        distance = 0;
+        allDistances.push_back(distance);
+        _edges_to_scale.push_back(ribID);
+        vector_vid = verticies_along_the_rib(*this, ribID, edgeInfo);
+        verticies_along_ribs.push_back(vector_vid);
+        _sculpt_verticies_to_scale.insert(_sculpt_verticies_to_scale.end(), vector_vid.begin(), vector_vid.end());
+        Vec3f silhouette = origin;
+        silhouette_Verticies.push_back(silhouette);
+        
+        distance = (origin - posf(downWalker.vertex())).length();
+        while (distance <= brushSize) {
+            if (is_pole(*this, downWalker.vertex())) {
+                break;
+            }
+            HalfEdgeID ribID = downWalker.next().halfedge();
+            _edges_to_scale.push_back(ribID);
+            vector_vid = verticies_along_the_rib(*this, ribID, edgeInfo);
+            verticies_along_ribs.push_back(vector_vid);
+            _sculpt_verticies_to_scale.insert(_sculpt_verticies_to_scale.end(), vector_vid.begin(), vector_vid.end());
+            allDistances.push_back(distance);
+            Vec3f silhouette = posf(downWalker.vertex());
+            silhouette_Verticies.push_back(silhouette);
+            
+            downWalker = downWalker.next().opp().next();
+            distance = (origin - posf(downWalker.vertex())).length();
+        }
+        
+        _current_scale_position = VertexAttributeVector<Vec3f>(no_vertices());
+        
+        _scaleFactor = scale;
+        
+        //Calculate centroids and gaussian weights
+        _centroids = centroid_for_ribs(*this, _edges_to_scale, edgeInfo);
+        assert(_centroids.size() == allDistances.size());
+        
+        _scale_weight_vector.clear();
+        if (_centroids.size() == 1) {
+            _scale_weight_vector.push_back(1.0f);
+        } else {
+            for(int i = 0; i < _centroids.size(); i++)
+            {
+                float distance = allDistances[i];
+                float x = distance/brushSize;
+                float weight;
+                if (x <= 1) {
+                    weight = pow(pow(x, 2) - 1, 2);
+                } else {
+                    weight = 0;
+                }
+                //            NSLog(@"%f", weight);
+                _scale_weight_vector.push_back(weight);
+            }
+        }
+        
+        if (anisotropic)
+        {
+            _anisotropic_projections = VertexAttributeVector<Vec3f>(no_vertices());
+            
+            for(int i = 0; i < _centroids.size(); i++)
+            {
+                Vec3d center = Vec3d(_centroids[i]);
+                vector<VertexID> verticies = verticies_along_ribs[i];
+                
+                Mat3x3d cov(0);
+                for (int i = 0; i < verticies.size(); i++) {
+                    VertexID vID = verticies[i];
+                    Vec3d p = pos(vID);
+                    Vec3d d = p - center;
+                    Mat3x3d m;
+                    outer_product(d,d,m);
+                    cov += m;
+                }
+                
+                Mat3x3d Q, L;
+                int sol = power_eigensolution(cov, Q, L);
+                
+                Vec3d n;
+                assert(sol >= 2);
+                n = normalize(cross(Q[0],Q[1]));
+                
+                Vec3f nGLK = Vec3f(n);
+                Vec3f nGLKWorld = getModelViewMatrix().mul_3D_vector(nGLK);
+                Vec3f zWorld = Vec3f(0, 0, 1);
+                Vec3f to_silhouette_axis_world = cross(zWorld, nGLKWorld);
+                
+                
+                //
+                //            if (secondPointOnTheModel) {
+                //
+                //            }
+                //            GLKVector3 touchPoint2World = [Utilities matrix4:self.modelViewMatrix multiplyVector3:touchPoint2];
+                //            touchPoint2World.z = to_silhouette_axis_world.z;
+                //            GLKVector3 touchPoint2
+                
+                Vec3f to_silhouette_axis_model = invert_affine(getModelViewMatrix()).mul_3D_vector(to_silhouette_axis_world);
+                to_silhouette_axis_model = normalize(to_silhouette_axis_model);
+                Vec to_silhouette_axis = Vec(to_silhouette_axis_model[0],
+                                             to_silhouette_axis_model[1],
+                                             to_silhouette_axis_model[2]);
+                
+                //            Vec silhouette = silhouette_Verticies[i];
+                //            Vec to_silhouette_axis = silhouette - center;
+                //            normalize(to_silhouette_axis);
+                HalfEdgeID ribID = _edges_to_scale[i];
+                for (Walker w = walker(ribID); !w.full_circle(); w = w.next().opp().next())
+                {
+                    Vec p = pos(w.vertex()) - center;
+                    float c = dot(p, to_silhouette_axis)/dot(to_silhouette_axis, to_silhouette_axis);
+                    Vec proj = c * to_silhouette_axis;
+                    if (secondPointOnTheModel) {
+                        Vec toOrg = Vec(origin) - Vec(center);
+                        if (dot(toOrg, proj) < 0) {
+                            proj = Vec(0,0,0);
+                        }
+                    }
+                    
+                    _anisotropic_projections[w.vertex()] = Vec3f(proj);
+                }
+            }
+        }
+        
+        
+        if (anisotropic) {
+            modState = Modification::SCULPTING_ANISOTROPIC_SCALING;
+        } else {
+            modState = Modification::SCULPTING_SCALING;
+        }        
+    }
+    
+    void PAMManifold::changeScalingSingleRib(float scale)
+    {
+       _scaleFactor = scale;
+    }
+    
+    void PAMManifold::endScalingSingleRib(float scale)
+    {
+        
+        if (modState == Modification::SCULPTING_SCALING)
+        {
+            modState = Modification::NONE;
+            vector<VertexID> allAffectedVerticies;
+            for (int i = 0; i < _edges_to_scale.size(); i++) {
+                vector<VertexID> affected = change_rib_radius(*this, _edges_to_scale[i], _centroids[i], edgeInfo, 1 + (_scaleFactor - 1)*_scale_weight_vector[i]); //update _manifold
+                allAffectedVerticies.insert(allAffectedVerticies.end(), affected.begin(), affected.end());
+            }
+            
+            _scale_weight_vector.clear();
+            _edges_to_scale.clear();
+            _sculpt_verticies_to_scale.clear();
+            updateVertexPositionOnGPU_Vector(allAffectedVerticies);
+            updateVertexNormOnGPU_Vector(allAffectedVerticies);
+            
+        }
+        else if (modState == Modification::SCULPTING_ANISOTROPIC_SCALING)
+        {
+            modState = Modification::NONE;
+            vector<VertexID> allAffectedVerticies;
+            
+            for (int i = 0; i < _edges_to_scale.size(); i ++)
+            {
+                HalfEdgeID ribID = _edges_to_scale[i];
+                float scale =   1 + (_scaleFactor - 1)*_scale_weight_vector[i];
+                for (Walker w = walker(ribID); !w.full_circle(); w = w.next().opp().next()) {
+                    VertexID vID = w.vertex();
+                    Vec3f proj = _anisotropic_projections[vID];
+                    Vec newPos = Vec(posf(vID) + (scale - 1) * proj);
+                    pos(vID) = newPos;
+                    allAffectedVerticies.push_back(vID);
+                }
+            }
+            
+            _scale_weight_vector.clear();
+            _edges_to_scale.clear();
+            updateVertexPositionOnGPU_Vector(allAffectedVerticies);
+            updateVertexNormOnGPU_Vector(allAffectedVerticies);
+        }
+    }
+    
+    void PAMManifold::updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies)
+    {
+        positionDataBuffer->bind();
+        unsigned char* tempVerticies = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+        for (VertexID vid: verticies) {
+            Vec3f pf = posf(vid);
+            int index = vertexIDtoIndex[vid];
+            memcpy(tempVerticies + index*sizeof(Vec3f), pf.get(), sizeof(Vec3f));
+        }
+        glUnmapBufferOES(GL_ARRAY_BUFFER);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    
+    void PAMManifold::updateVertexNormOnGPU_Vector(std::vector<HMesh::VertexID>& verticies)
+    {
+        normalDataBuffer->bind();
+        unsigned char* tempNormal = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+        for (VertexID vid: verticies) {
+            Vec3f normalf = HMesh::normalf(*this, vid);
+            int index = vertexIDtoIndex[vid];
+            memcpy(tempNormal + index*sizeof(Vec3f), normalf.get(), sizeof(Vec3f));
+        }
+        glUnmapBufferOES(GL_ARRAY_BUFFER);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    
+    void PAMManifold::updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies)
+    {
+        positionDataBuffer->bind();
+        unsigned char* tempVerticies = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+        for (VertexID vid: verticies) {
+            Vec3f pf = posf(vid);
+            int index = vertexIDtoIndex[vid];
+           memcpy(tempVerticies + index*sizeof(Vec3f), pf.get(), sizeof(Vec3f));
+        }
+        glUnmapBufferOES(GL_ARRAY_BUFFER);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+    
+    void PAMManifold::updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies)
+    {
+        normalDataBuffer->bind();
+        unsigned char* tempNormal = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+        for (VertexID vid: verticies) {
+            Vec3f normalf = HMesh::normalf(*this, vid);
+            int index = vertexIDtoIndex[vid];
+            memcpy(tempNormal + index*sizeof(Vec3f), normalf.get(), sizeof(Vec3f));
+        }
+        glUnmapBufferOES(GL_ARRAY_BUFFER);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 }
+

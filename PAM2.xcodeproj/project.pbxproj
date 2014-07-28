@@ -448,8 +448,6 @@
 		159499DE196BA692000095C4 /* shuttle.obj in Resources */ = {isa = PBXBuildFile; fileRef = 159499DC196BA692000095C4 /* shuttle.obj */; };
 		159499E0196BA6FC000095C4 /* alfa147.obj in Resources */ = {isa = PBXBuildFile; fileRef = 159499DF196BA6FC000095C4 /* alfa147.obj */; };
 		159499E1196BA6FC000095C4 /* alfa147.obj in Resources */ = {isa = PBXBuildFile; fileRef = 159499DF196BA6FC000095C4 /* alfa147.obj */; };
-		159499E6196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */; };
-		159499E7196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */; };
 		159499EF196C01B5000095C4 /* RAPolyLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499ED196C01B5000095C4 /* RAPolyLine.cpp */; };
 		159499F0196C01B5000095C4 /* RAPolyLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 159499ED196C01B5000095C4 /* RAPolyLine.cpp */; };
 		15AE973219777ABE00316852 /* pelvis.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15AE973119777ABE00316852 /* pelvis.obj */; };
@@ -1345,8 +1343,6 @@
 		159499D9196BA372000095C4 /* dino.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = dino.obj; path = ../../../Desktop/dino.obj; sourceTree = "<group>"; };
 		159499DC196BA692000095C4 /* shuttle.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = shuttle.obj; path = ../../../Downloads/shuttle.obj; sourceTree = "<group>"; };
 		159499DF196BA6FC000095C4 /* alfa147.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = alfa147.obj; path = ../../../Downloads/alfa147.obj; sourceTree = "<group>"; };
-		159499E4196BE6E6000095C4 /* OssaPlatesViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OssaPlatesViewController.h; sourceTree = "<group>"; };
-		159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = OssaPlatesViewController.mm; sourceTree = "<group>"; };
 		159499ED196C01B5000095C4 /* RAPolyLine.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; path = RAPolyLine.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		159499EE196C01B5000095C4 /* RAPolyLine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = RAPolyLine.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15AE973119777ABE00316852 /* pelvis.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = pelvis.obj; path = "Temp Files/pelvis.obj"; sourceTree = "<group>"; };
@@ -2532,8 +2528,6 @@
 				15B7D2A81978A94F008ADA28 /* roundsegment.obj */,
 				151A4AE81974EC6300992F42 /* platesegment.obj */,
 				15EEF1C3195F79AD00902AA7 /* sphere.obj */,
-				159499E4196BE6E6000095C4 /* OssaPlatesViewController.h */,
-				159499E5196BE6E6000095C4 /* OssaPlatesViewController.mm */,
 				151A4A961973B5AD00992F42 /* SegmentSpline.cpp */,
 				151A4A971973B5AD00992F42 /* SegmentSpline.h */,
 				15AE97371977A15B00316852 /* Plate.cpp */,
@@ -3089,7 +3083,6 @@
 				1504429F1981A9B60090B959 /* Wm5IntrSegment2Segment2.cpp in Sources */,
 				150441C61981A9B60090B959 /* Wm5ApprPolynomialFit2.cpp in Sources */,
 				150442781981A9B60090B959 /* Wm5IntrLine2Ray2.cpp in Sources */,
-				159499E6196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */,
 				150442411981A9B60090B959 /* Wm5DistSegment3Rectangle3.cpp in Sources */,
 				150442631981A9B60090B959 /* Wm5Intersector1.cpp in Sources */,
 				150441FE1981A9B60090B959 /* Wm5BSplineVolume.cpp in Sources */,
@@ -3235,7 +3228,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				159499E7196BE6E6000095C4 /* OssaPlatesViewController.mm in Sources */,
 				159499D2196B9BB6000095C4 /* glu.cpp in Sources */,
 				15D4F0C11958F678001245FB /* BasePAMViewController.mm in Sources */,
 				151A4A991973B5AD00992F42 /* SegmentSpline.cpp in Sources */,

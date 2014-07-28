@@ -14,6 +14,11 @@
 #include "Vec4uc.h"
 #include "RAMesh.h"
 #include "KDTree.h"
+#include "AttributeVector.h"
+#include <map>
+#include <set>
+
+class EdgeInfo;
 
 namespace PAMMesh
 {
@@ -24,10 +29,6 @@ namespace PAMMesh
         ~PAMManifold();
 
         void setupShaders();
-        
-        void bufferVertexDataToGPU();
-        
-//        void normalizeVertexCoordinates();
         
         void draw() const override;
         void drawToDepthBuffer();
@@ -44,27 +45,129 @@ namespace PAMMesh
         ///add kd tree support
         void buildKDTree();
         
-        /* MODELING FUNCTIONS */
+        enum class Modification
+        {
+            NONE,
+            SCULPTING_SCALING,
+            SCULPTING_ANISOTROPIC_SCALING,
+            SCULPTING_BUMP_CREATION,
+            
+            PIN_POINT_SET,
+            
+            BRANCH_ROTATION,
+            BRANCH_SCALING,
+            BRANCH_TRANSLATION,
+            
+            BRANCH_DETACHED,
+            BRANCH_DETACHED_AN_MOVED,
+            BRANCH_DETACHED_ROTATE,
+            
+            BRANCH_COPIED_BRANCH_FOR_CLONING,
+            BRANCH_COPIED_AND_MOVED_THE_CLONE,
+            BRANCH_CLONE_ROTATION,
+            BRANCH_CLONE_SCALING,
+            
+            BRANCH_POSE_ROTATE,
+            BRANCH_POSE_TRANSLATE
+        };
+        Modification modState;
+
+        
+#pragma mark - BODY CREATION
         bool createBody(std::vector<CGLA::Vec3f>& polyline1,
                         std::vector<CGLA::Vec3f>& polyline2,
                         float zCoord,
                         std::vector<std::vector<CGLA::Vec3f>>& debugAllRibs,
                         bool debug);
+#pragma mark - BRANCH CREATION
+//        void startCreateBranch(CGLA::Vec3f touchPoint, CGLA::Vec3f closestPoint);
+//        void continueCreateBranch(CGLA::Vec3f touchPoint);
+        void endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
+                                   CGLA::Vec3f firstPoint,
+                                   bool touchedModel,
+                                   bool shouldStick,
+                                   float touchSize);
+
+#pragma mark - BUMP CREATION
         
+#pragma mark - RIB SCALING
+        void startScalingSingleRib(CGLA::Vec3f touchPoint,
+                                   bool secondPointOnTheModel,
+                                   float scale,
+                                   float velocity,
+                                   float touchSize,
+                                   bool anisotropic);
+        void changeScalingSingleRib(float scale);
+        void endScalingSingleRib(float scale);
+        void updateMesh();
     private:
-        Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree = nullptr;
+        
+        std::map<HMesh::VertexID, int> vertexIDtoIndex;
+        Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree;
+        HMesh::HalfEdgeAttributeVector<EdgeInfo> edgeInfo;
+        std::vector<HMesh::HalfEdgeID> _edges_to_scale;
+        std::vector<HMesh::VertexID> _sculpt_verticies_to_scale;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _current_scale_position;
+        std::vector<CGLA::Vec3f> _centroids;
+        std::vector<float> _scale_weight_vector;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _anisotropic_projections;
+        
+        float _scaleFactor;
+        
+        void bufferVertexDataToGPU();
+        void traceEdgeInfo();
         
         bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
+        bool closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
 
         void getVertexData(CGLA::Vec3f*& vertexPositions,
                            CGLA::Vec3f*& vertexNormals,
                            CGLA::Vec4uc*& vertexColors,
                            std::vector<unsigned int>*& indicies,
                            CGLA::Vec4uc*& wireframeColor,
-                           std::vector<unsigned int>*& wireframeIndicies) const;
+                           std::vector<unsigned int>*& wireframeIndicies);
         
         void populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs);
         int indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib);
+        
+        void updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
+        void updateVertexNormOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
+        void updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies);
+        void updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies);
+        
+        
+        int branchWidthForAngle(float angle, HMesh::VertexID vID);
+        bool createHoleAtVertex(HMesh::VertexID vID,
+                                int width,
+                                HMesh::VertexID& newPoleID,
+                                float& bWidth,
+                                CGLA::Vec3f& holeCenter,
+                                CGLA::Vec3f& holeNorm,
+                                HMesh::HalfEdgeID& boundayHalfEdge);
+        bool createBranchAtVertex(HMesh::VertexID vID,
+                                  int numOfSegments,
+                                  HMesh::VertexID& newPoleID,
+                                  float& bWidth);
+        
+        void populateNewLimb(std::vector<std::vector<CGLA::Vec3f>>& allRibs,
+                             std::vector<CGLA::Vec3f>& vertices,
+                             std::vector<int>& faces,
+                             std::vector<int>& indices);
+        
+        void allVerticiesAndHalfEdges(std::vector<HMesh::VertexID>& verticies,
+                                      std::vector<HMesh::HalfEdgeID>& halfedges,
+                                      HMesh::VertexID vID);
+        
+        bool boundaryHalfEdgeForClonedMesh(HMesh::HalfEdgeID& boundaryHalfedge,
+                                           std::vector<HMesh::HalfEdgeID>& newHalfEdges);
+
+        void stitchBranchToBody(HMesh::HalfEdgeID branchHID,HMesh::HalfEdgeID bodyHID);
+
+        int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
+
+        
+        
+
     };
 }
 
