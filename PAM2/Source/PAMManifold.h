@@ -36,6 +36,10 @@ namespace PAMMesh
         
         int loadObjFile(const char* path) override;
         int loadPAMObjFile(const char* path);
+        void subdivide();
+        void globalSmoothing();
+        void showSkeleton(bool show);
+        void clearVertexData();
 
         ///calculation intensive, not caching
         RAEngine::Bounds getBoundingBox() const override;
@@ -85,7 +89,8 @@ namespace PAMMesh
         void endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
                                    CGLA::Vec3f firstPoint,
                                    bool touchedModel,
-                                   float touchSize);
+                                   float touchSize,
+                                   float angularWidth);
 
 #pragma mark - BUMP CREATION
         

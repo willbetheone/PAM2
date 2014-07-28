@@ -8,11 +8,17 @@
 
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
+#import "SettingsViewController.h"
 
-@interface BasePAMViewController : GLKViewController {
+@interface BasePAMViewController : GLKViewController <SettingsViewControllerDelegate> {
     GLsizei _glWidth;
     GLsizei _glHeight;
-    GLfloat _aspectRatio;
+    
+    UIViewController* _settingsController;
+    UIPopoverController* _settingsPopover;
+    
+    UILabel* _transformModeLabel;
+    UILabel* _hintLabel;
 }
 
 @end

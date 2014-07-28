@@ -454,6 +454,9 @@
 		15AE97391977A15B00316852 /* Plate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE97371977A15B00316852 /* Plate.cpp */; };
 		15AE973A1977A15B00316852 /* Plate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15AE97371977A15B00316852 /* Plate.cpp */; };
 		15B7D2A91978A94F008ADA28 /* roundsegment.obj in Resources */ = {isa = PBXBuildFile; fileRef = 15B7D2A81978A94F008ADA28 /* roundsegment.obj */; };
+		15B84EBD1985F78700BED782 /* SettingsViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B84EBB1985F78700BED782 /* SettingsViewController.mm */; };
+		15B84EBE1985F78700BED782 /* SettingsViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 15B84EBB1985F78700BED782 /* SettingsViewController.mm */; };
+		15B84EC0198601D900BED782 /* MessageUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 15B84EBF198601D900BED782 /* MessageUI.framework */; };
 		15B8A421194CD1D900CD578C /* RAMesh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41B194CD1D900CD578C /* RAMesh.cpp */; };
 		15B8A422194CD1D900CD578C /* RAES2ShaderProgram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */; };
 		15B8A423194CD1D900CD578C /* RAES2VertexBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 15B8A41F194CD1D900CD578C /* RAES2VertexBuffer.cpp */; };
@@ -1349,6 +1352,9 @@
 		15AE97371977A15B00316852 /* Plate.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = Plate.cpp; sourceTree = "<group>"; };
 		15AE97381977A15B00316852 /* Plate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Plate.h; sourceTree = "<group>"; };
 		15B7D2A81978A94F008ADA28 /* roundsegment.obj */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = roundsegment.obj; sourceTree = "<group>"; };
+		15B84EBB1985F78700BED782 /* SettingsViewController.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SettingsViewController.mm; sourceTree = "<group>"; };
+		15B84EBC1985F78700BED782 /* SettingsViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SettingsViewController.h; sourceTree = "<group>"; };
+		15B84EBF198601D900BED782 /* MessageUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MessageUI.framework; path = System/Library/Frameworks/MessageUI.framework; sourceTree = SDKROOT; };
 		15B8A41B194CD1D900CD578C /* RAMesh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RAMesh.cpp; path = Source/RAEngine/Core/RAMesh.cpp; sourceTree = "<group>"; };
 		15B8A41C194CD1D900CD578C /* RAMesh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = RAMesh.h; path = Source/RAEngine/Core/RAMesh.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		15B8A41D194CD1D900CD578C /* RAES2ShaderProgram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = RAES2ShaderProgram.cpp; path = Source/RAEngine/Core/RAES2ShaderProgram.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -1388,6 +1394,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				15B84EC0198601D900BED782 /* MessageUI.framework in Frameworks */,
 				150CB2151948F88900636103 /* GLKit.framework in Frameworks */,
 				150CB2131948F86B00636103 /* OpenGLES.framework in Frameworks */,
 				150CB20F1948F02100636103 /* libGEL-iOS Static Library.a in Frameworks */,
@@ -2404,6 +2411,7 @@
 		150CB1C51948E6B800636103 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				15B84EBF198601D900BED782 /* MessageUI.framework */,
 				150B747B1972179400F3D81D /* libpthread.dylib */,
 				150CB2141948F88900636103 /* GLKit.framework */,
 				150CB2121948F86B00636103 /* OpenGLES.framework */,
@@ -2582,6 +2590,8 @@
 		15B93157194A821E0020FA2D /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
+				15B84EBB1985F78700BED782 /* SettingsViewController.mm */,
+				15B84EBC1985F78700BED782 /* SettingsViewController.h */,
 				15D4F0BC1958F678001245FB /* BasePAMViewController.h */,
 				15D4F0BD1958F678001245FB /* BasePAMViewController.mm */,
 				15D4F0BE1958F678001245FB /* PAMES2ViewController.h */,
@@ -3193,6 +3203,7 @@
 				150442D31981A9B60090B959 /* Wm5EigenDecomposition.cpp in Sources */,
 				1504430A1981A9B60090B959 /* Wm5Stream.cpp in Sources */,
 				150442071981A9B60090B959 /* Wm5NaturalSpline1.cpp in Sources */,
+				15B84EBD1985F78700BED782 /* SettingsViewController.mm in Sources */,
 				150442DA1981A9B60090B959 /* Wm5OdeImplicitEuler.cpp in Sources */,
 				150441C71981A9B60090B959 /* Wm5ApprPolynomialFit3.cpp in Sources */,
 				150442081981A9B60090B959 /* Wm5NaturalSpline2.cpp in Sources */,
@@ -3241,6 +3252,7 @@
 				159499CA196B7842000095C4 /* RAES2OffScreenBuffer.cpp in Sources */,
 				15D4F0C81958F691001245FB /* RALogManager.cpp in Sources */,
 				15AE973A1977A15B00316852 /* Plate.cpp in Sources */,
+				15B84EBE1985F78700BED782 /* SettingsViewController.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

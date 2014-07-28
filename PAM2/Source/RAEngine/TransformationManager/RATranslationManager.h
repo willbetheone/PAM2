@@ -23,6 +23,7 @@ namespace RAEngine {
         void translate(CGLA::Vec3f translation);
         void handlePanGesture(GestureState state, CGLA::Vec3f translation);
         CGLA::Vec3f startPoint;
+        void reset();
     private:
         CGLA::Mat4x4f translationMatrix;
         CGLA::Mat4x4f accumulatedTranslation;

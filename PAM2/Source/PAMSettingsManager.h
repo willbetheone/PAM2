@@ -23,9 +23,7 @@ namespace PAMMesh
         bool transform;
         bool showSkeleton;
         float smoothingBrushSize;
-        float thinBranchWidth;
-        float mediumBranchWidth;
-        float largeBranchWidth;
+        float branchWidth;
         int baseSmoothingIterations;
         bool spineSmoothing;
         bool poleSmoothing;

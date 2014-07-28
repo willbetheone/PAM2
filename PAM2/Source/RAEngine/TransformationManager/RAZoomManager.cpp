@@ -27,4 +27,9 @@ namespace RAEngine
         }
         return scaleFactor;
     }
+    
+    void RAZoomManager::reset()
+    {
+        scaleFactor = 1.0f;
+    }
 }

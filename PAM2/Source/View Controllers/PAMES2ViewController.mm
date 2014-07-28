@@ -10,6 +10,7 @@
 #include "Mat4x4f.h"
 #include "PAMManifold.h"
 #include "../HMesh/obj_load.h"
+#include "../HMesh/obj_save.h"
 #include "RARotationManager.h"
 #include "RAZoomManager.h"
 #include "RATranslationManager.h"
@@ -186,6 +187,11 @@ using namespace RAEngine;
     }
     
     PAMSettingsManager::getInstance().transform  = !PAMSettingsManager::getInstance().transform;
+    if (PAMSettingsManager::getInstance().transform) {
+        _transformModeLabel.text = @"Transform";
+    } else {
+        _transformModeLabel.text = @"Model";
+    }
 }
 
 -(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
@@ -210,7 +216,9 @@ using namespace RAEngine;
             GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
             float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
             
-            if (![self modelCoordinates:firstPoint forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)]) {
+            if (![self modelCoordinates:firstPoint
+                          forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)])
+            {
                 RA_LOG_WARN("Touched background");
                 return;
             }
@@ -240,10 +248,121 @@ using namespace RAEngine;
             pamManifold->endCreateBranchBended(polyline1Data,
                                                firstPoint,
                                                isFirsPointOnAModel,
-                                               [self touchSizeForGesture:sender]);
+                                               [self touchSizeForGesture:sender],
+                                               PAMSettingsManager::getInstance().branchWidth);
         }
     }
 }
+
+-(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
+{
+    if (PAMSettingsManager::getInstance().transform)
+    {
+        if (![self modelIsLoaded]) {
+            return;
+        }
+        
+        CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+                                            inView:(GLKView*)sender.view];
+        Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+        Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+        Vec3f rayOrigin;
+        gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+        Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
+        
+        GestureState state = [self gestureStateForRecognizer:sender];
+        translationManager->handlePanGesture(state, axis);
+    }
+    else
+    {
+        if ([self modelIsLoaded]) {
+            return;
+        }
+        
+        if (sender.state == UIGestureRecognizerStateBegan)
+        {
+            polyline1Data.clear();
+            polyline2Data.clear();
+        }
+        
+        if (sender.numberOfTouches == 2)
+        {
+            CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
+                                                 inView:(GLKView*)sender.view];
+            CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
+                                                 inView:(GLKView*)sender.view];
+            
+            Vec3f rayOrigin1, rayOrigin2;
+            BOOL result1 = [self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1];
+            BOOL result2 = [self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2];
+            if (!result1 || !result2) {
+                RA_LOG_WARN("Couldn't determine touch area");
+                return;
+            }
+            
+            polyline1Data.push_back(rayOrigin1);
+            polyline2Data.push_back(rayOrigin2);
+            
+            if (polyline1Data.size() > 1 && polyline2Data.size() > 1) {
+                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                polyline1->enabled = true;
+                polyline2->enabled = true;
+            }
+        }
+        
+        if (sender.state == UIGestureRecognizerStateEnded ||
+            sender.state == UIGestureRecognizerStateFailed ||
+            sender.state == UIGestureRecognizerStateCancelled)
+        {
+            polyline1->enabled = false;
+            polyline2->enabled = false;
+            
+            if (pamManifold != nullptr) {
+                delete pamManifold;
+            }
+            pamManifold = new PAMManifold();
+            pamManifold->setupShaders();
+            vector<vector<Vec3f>> debugRibs;
+            if (pamManifold->createBody(polyline1Data, polyline2Data, 0, debugRibs, false))
+            {
+                pamManifold->enabled = true;
+                
+                GLfloat zNear = 1.0;
+                GLfloat newOriginZ = -1*(zNear + bounds.radius);
+                GLfloat curOriginZ = bounds.center[2];
+                
+                pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                
+                [self setupBoundingBox];
+                
+#if SHOW_DEBUG_LINES
+                clearVector(debugPolylines);
+                for (int i = 0; i < debugRibs.size();i++) {
+                    vector<Vec3f> rib = debugRibs[i];
+                    if (rib.size() < 2) {
+                        continue;
+                    }
+                    RAPolyLine* p = new RAPolyLine();
+                    p->setupShaders(*vShader, *fShader);
+                    p->bufferVertexDataToGPU(rib, Vec4uc(0,0,255,255), Vec4uc(0,255,0,255), GL_LINES);
+                    
+                    p->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                    p->enabled = true;
+                    debugPolylines.push_back(p);
+                }
+                //                PAMSettingsManager::getInstance().transform = true;
+#endif
+            }
+            else
+            {
+                delete pamManifold;
+                pamManifold = nullptr;
+            }
+        }
+    }
+}
+
 
 -(void)handleRotationGesture:(UIRotationGestureRecognizer*)sender
 {
@@ -350,112 +469,6 @@ using namespace RAEngine;
     }
 }
 
--(void)handleTwoFingerPanGesture:(UIPanGestureRecognizer*)sender
-{
-    if (PAMSettingsManager::getInstance().transform)
-    {
-        if (![self modelIsLoaded]) {
-            return;
-        }
-
-        CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
-                                            inView:(GLKView*)sender.view];
-        Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
-        Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
-        Vec3f rayOrigin;
-        gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
-        Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
-        
-        GestureState state = [self gestureStateForRecognizer:sender];
-        translationManager->handlePanGesture(state, axis);
-    }
-    else
-    {
-        if (sender.state == UIGestureRecognizerStateBegan)
-        {
-            polyline1Data.clear();
-            polyline2Data.clear();
-        }
-        
-        if (sender.numberOfTouches == 2)
-        {
-            CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            
-            Vec3f rayOrigin1, rayOrigin2;
-            BOOL result1 = [self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1];
-            BOOL result2 = [self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2];
-            if (!result1 || !result2) {
-                RA_LOG_WARN("Couldn't determine touch area");
-                return;
-            }
-            
-            polyline1Data.push_back(rayOrigin1);
-            polyline2Data.push_back(rayOrigin2);
-            
-            if (polyline1Data.size() > 1 && polyline2Data.size() > 1) {
-                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-                polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-                polyline1->enabled = true;
-                polyline2->enabled = true;
-            }
-        }
-
-        if (sender.state == UIGestureRecognizerStateEnded ||
-            sender.state == UIGestureRecognizerStateFailed ||
-            sender.state == UIGestureRecognizerStateCancelled)
-        {
-            polyline1->enabled = false;
-            polyline2->enabled = false;
-
-            if (pamManifold != nullptr) {
-                delete pamManifold;
-            }
-            pamManifold = new PAMManifold();
-            pamManifold->setupShaders();
-            vector<vector<Vec3f>> debugRibs;
-            if (pamManifold->createBody(polyline1Data, polyline2Data, 0, debugRibs, false))
-            {
-                pamManifold->enabled = true;
-                
-                GLfloat zNear = 1.0;
-                GLfloat newOriginZ = -1*(zNear + bounds.radius);
-                GLfloat curOriginZ = bounds.center[2];
-                
-                pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-                
-                [self setupBoundingBox];
-                
-#if SHOW_DEBUG_LINES
-                clearVector(debugPolylines);
-                for (int i = 0; i < debugRibs.size();i++) {
-                    vector<Vec3f> rib = debugRibs[i];
-                    if (rib.size() < 2) {
-                        continue;
-                    }
-                    RAPolyLine* p = new RAPolyLine();
-                    p->setupShaders(*vShader, *fShader);
-                    p->bufferVertexDataToGPU(rib, Vec4uc(0,0,255,255), Vec4uc(0,255,0,255), GL_LINES);
-                    
-                    p->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-                    p->enabled = true;
-                    debugPolylines.push_back(p);
-                }
-//                PAMSettingsManager::getInstance().transform = true;
-#endif
-
-            }
-            else
-            {
-                delete pamManifold;
-                pamManifold = nullptr;
-            }
-        }
-    }
-}
-
 //Load empty workspace
 -(void)loadEmptyMeshData
 {
@@ -477,7 +490,7 @@ using namespace RAEngine;
     [self setPaused:YES]; //pause rendering
     
     //Load obj file
-    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"shuttle" ofType:@"obj"];
+    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"HAND PAM 15" ofType:@"obj"];
     if (objPath) {
         if (pamManifold != nullptr) {
             delete pamManifold;
@@ -486,7 +499,8 @@ using namespace RAEngine;
         pamManifold = new PAMManifold();
         pamManifold->setupShaders();
         pamManifold->loadObjFile(objPath.UTF8String);
-
+        pamManifold->enabled = true;
+        
         bounds = pamManifold->getBoundingBox();
         
         GLfloat zNear = 1.0f;
@@ -745,7 +759,7 @@ using namespace RAEngine;
 
 -(BOOL)modelIsLoaded
 {
-    return pamManifold != nullptr && pamManifold->enabled;
+    return pamManifold != nullptr && pamManifold->enabled && pamManifold->no_vertices() > 0;
 }
 
 template <class C>
@@ -755,6 +769,130 @@ void clearVector(std::vector<C*>& inputvector)
         delete inputvector[i];
     }
     inputvector.clear();
+}
+
+#pragma mark - MFMailComposeViewControllerDelegate
+- (void)mailComposeController:(MFMailComposeViewController*)controller
+          didFinishWithResult:(MFMailComposeResult)result error:(NSError*)error
+{
+	[self dismissViewControllerAnimated:YES completion:NULL];
+}
+
+#pragma mark - SettingsViewControllerDelegate
+
+-(void)emailObj
+{
+    if ([MFMailComposeViewController canSendMail]) {
+        NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString* cacheFolder = [NSString stringWithFormat:@"%@/ObjFiles", [paths objectAtIndex:0]];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:cacheFolder]) {
+            [[NSFileManager defaultManager] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        NSString *timeStampValue = [NSString stringWithFormat:@"%ld", (long)[[NSDate date] timeIntervalSince1970]];
+        NSString* filePath = [NSString stringWithFormat:@"%@/obj_%@.obj", cacheFolder, timeStampValue];
+
+        if (obj_save(filePath.UTF8String, *pamManifold))
+        {
+            MFMailComposeViewController *picker = [[MFMailComposeViewController alloc] init];
+            picker.mailComposeDelegate = self;
+            [picker setSubject:@"PAM obj"];
+            [picker setToRecipients:@[@"rindopuz23@gmail.com"]];
+            // Attach an image to the email
+            NSData *myData = [NSData dataWithContentsOfFile:filePath];
+            if (myData != nil) {
+                
+                [picker addAttachmentData:myData mimeType:@"text/plain" fileName:@"PAM.obj"];
+                [self presentViewController:picker animated:YES completion:nil];
+            } else {
+                [[[UIAlertView alloc] initWithTitle:@"Error" message:@"Could not retrieve obj file" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+            }
+        }
+    } else {
+        [[[UIAlertView alloc] initWithTitle:@"Error" message:@"No email account is setup" delegate:nil cancelButtonTitle:@"OK" otherButtonTitles:nil] show];
+    }
+}
+
+-(void)subdivide
+{
+    pamManifold->subdivide();
+}
+
+-(void)loadArmadillo
+{
+    [self resetTransformations];
+    [self loadMeshData];
+}
+
+-(void)showRibJunctions {
+//    [_pMesh showRibJunctions];
+}
+
+-(void)globalSmoothing
+{
+    pamManifold->globalSmoothing();
+}
+
+-(void)showSkeleton:(BOOL)show
+{
+//    PAMSettingsManager::getInstance().showSkeleton = show;
+//    pamManifold->showSkeleton(show);
+}
+
+-(void)clearModel
+{
+    pamManifold->clearVertexData();
+    [self loadEmptyMeshData];
+    [self resetTransformations];
+    PAMSettingsManager::getInstance().transform = false;
+    _transformModeLabel.text = @"Model";
+}
+
+-(void)smoothingBrushSize:(float)brushSize
+{
+    PAMSettingsManager::getInstance().smoothingBrushSize = brushSize;
+}
+
+-(void)baseSmoothingIterations:(float)iter
+{
+    PAMSettingsManager::getInstance().baseSmoothingIterations = iter;
+}
+
+-(void)branchWidth:(float)width
+{
+    PAMSettingsManager::getInstance().branchWidth = width;
+}
+
+-(void)tapSmoothing:(float)power
+{
+    PAMSettingsManager::getInstance().tapSmoothing = power;
+}
+
+-(void)spineSmoothing:(BOOL)spineSmoothin
+{
+    PAMSettingsManager::getInstance().spineSmoothing = spineSmoothin;
+}
+
+-(void)poleSmoothing:(BOOL)poleSmoothing
+{
+    PAMSettingsManager::getInstance().poleSmoothing = poleSmoothing;
+}
+
+-(void)resetTransformations
+{
+    rotManager->reset();
+    translationManager->reset();
+    zoomManager->reset();
+}
+
+//SCULPTING
+-(void)scalingSculptTypeChanged:(PAMSettingsManager::ScultpScalingType)type
+{
+    PAMSettingsManager::getInstance().sculptScalingType = type;
+}
+
+-(void)silhouetteScalingBrushSize:(float)width
+{
+    PAMSettingsManager::getInstance().silhouetteScalingBrushSize = width;
 }
 
 

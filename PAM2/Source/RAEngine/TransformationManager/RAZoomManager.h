@@ -20,6 +20,7 @@ namespace RAEngine
         float getScaleFactor() const;
         void handlePinchGesture(GestureState state,
                                 float scale);
+        void reset();
     private:
         float scaleFactor = 1.0f;
         float curFactor;

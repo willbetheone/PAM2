@@ -8,7 +8,8 @@
 
 #import <UIKit/UIKit.h>
 #import "BasePAMViewController.h"
+#import <MessageUI/MessageUI.h>
 
-@interface PAMES2ViewController : BasePAMViewController
+@interface PAMES2ViewController : BasePAMViewController <MFMailComposeViewControllerDelegate>
 
 @end

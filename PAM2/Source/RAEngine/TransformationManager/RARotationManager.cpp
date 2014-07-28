@@ -60,4 +60,9 @@ namespace RAEngine
         return manualRotationMatrix;
     }
     
+    void RARotationManager::reset()
+    {
+        manualRotationMatrix = identity_Mat4x4f();
+    }
+    
 }

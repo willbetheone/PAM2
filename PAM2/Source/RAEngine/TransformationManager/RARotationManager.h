@@ -23,7 +23,7 @@ namespace RAEngine
         CGLA::Mat4x4f getRotationMatrix() const;
         void handlePanGesture(GestureState state, CGLA::Vec2i glTouch, CGLA::Vec3f pivotPoint);
         void handleRotationGesture(GestureState state, float rotation, CGLA::Vec3f pivotPoint);
-        
+        void reset();
     private:
         CGLA::Vec2i lastLoc;
         float lastRot;

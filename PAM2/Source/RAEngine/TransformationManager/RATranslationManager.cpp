@@ -47,5 +47,11 @@ namespace RAEngine {
         }
 
     }
+    
+    void RATranslationManager::reset()
+    {
+        translationMatrix = identity_Mat4x4f();
+        accumulatedTranslation = identity_Mat4x4f();
+    }
 
 }

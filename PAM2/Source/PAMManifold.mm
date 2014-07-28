@@ -319,9 +319,38 @@ namespace PAMMesh
             }
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
-            
         }
-
+    }
+    
+    void PAMManifold::subdivide()
+    {
+        polar_subdivide(*this, 1);
+        buildKDTree();
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
+    }
+    
+    void PAMManifold::globalSmoothing()
+    {
+        laplacian_smooth(*this, 1.0, 2);
+        buildKDTree();
+        bufferVertexDataToGPU();
+    }
+    
+    void PAMManifold::showSkeleton(bool show)
+    {
+//        if (show) {
+//            skeleton_retract(*this, 0.9);
+//        } else {
+//            skeleton_retract(*this, -0.9);
+//        }
+//        bufferVertexDataToGPU();
+    }
+    
+    void PAMManifold::clearVertexData()
+    {
+        this->clear();
+        bufferVertexDataToGPU();
     }
     
     void PAMManifold::draw() const
@@ -881,7 +910,8 @@ namespace PAMMesh
     void PAMManifold::endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
                                             CGLA::Vec3f firstPoint,
                                             bool touchedModelStart,
-                                            float touchSize)
+                                            float touchSize,
+                                            float angularWidth)
                                             
     {
         VertexID touchedVID;
@@ -908,7 +938,7 @@ namespace PAMMesh
             return;
         }
 
-        int limbWidth = branchWidthForAngle(40*DEGREES_TO_RADIANS, touchedVID);
+        int limbWidth = branchWidthForAngle(angularWidth*DEGREES_TO_RADIANS, touchedVID);
         if (limbWidth <= 1 ) {
             return;
         }
