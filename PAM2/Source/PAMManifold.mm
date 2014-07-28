@@ -22,6 +22,7 @@
 #include "ArithMatFloat.h"
 #include "PAMSettingsManager.h"
 #include <queue>
+#include "smooth.h"
 
 #define kCENTROID_STEP 0.025f
 
@@ -52,6 +53,7 @@ namespace PAMMesh
             RA_LOG_ERROR("Failed to load obj file %s", path);
             return 0;
         }
+        buildKDTree();
         bufferVertexDataToGPU();
         traceEdgeInfo();
         return 1;
@@ -258,68 +260,6 @@ namespace PAMMesh
         return false;
     }
     
-    bool PAMManifold::closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
-    {
-        if (kdTree != nullptr)
-        {
-            Vec3f coord;
-            Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
-            float max = 0.1; //TODO
-            if (kdTree->closest_point(pointModel, max, coord, vid)){
-                return true;
-            }
-            return false;
-        }
-        else
-        {
-            if (no_vertices() == 0) {
-                return false;
-            }
-
-            //iterate over every face
-            float distance = FLT_MAX;
-            Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
-            
-            for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
-            {
-                Vec3f vertexPos = posf(*vID);
-                float cur_distance = (pointModel - vertexPos).length();
-                if (cur_distance < distance) {
-                    distance = cur_distance;
-                    vid = *vID;
-                }
-            }
-            return true;
-        }
-    }
-    
-    bool PAMManifold::closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
-    {
-        if (no_vertices() == 0) {
-            return false;
-        }
-        
-        float distance = FLT_MAX;
-        
-        //touchPoint to world coordinates
-        Vec3f touchPoint = viewMatrix.mul_3D_point(point);
-        Vec2f touchPoint2D = Vec2f(touchPoint[0], touchPoint[1]);
-        
-        for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
-        {
-            Vec3f vertexPos = posf(*vID);
-            Vec3f glkVertextPosModelView = getModelViewMatrix().mul_3D_point(vertexPos);
-            Vec2f glkVertextPosModelView_2 = Vec2f(glkVertextPosModelView[0], glkVertextPosModelView[1]);
-            float cur_distance = length(touchPoint2D - glkVertextPosModelView_2);
-            
-            if (cur_distance < distance) {
-                distance = cur_distance;
-                vid = *vID;
-            }
-        }
-        return true;
-    }
-    
     void PAMManifold::buildKDTree()
     {
         if (kdTree != nullptr) {
@@ -465,6 +405,218 @@ namespace PAMMesh
         glPopGroupMarkerEXT();
     }
 
+#pragma mark - UTILITIES
+    
+    bool PAMManifold::closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
+    {
+        if (kdTree != nullptr)
+        {
+            //try kd tree
+            Vec3f coord;
+            Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
+            float max = 0.1; //TODO
+            if (kdTree->closest_point(pointModel, max, coord, vid)){
+                return true;
+            }
+        }
+        
+        if (no_vertices() == 0) {
+            return false;
+        }
+        
+        //iterate over every face
+        float distance = FLT_MAX;
+        Vec3f pointModel = invert_affine(getModelMatrix()).mul_3D_point(point);
+        
+        for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
+        {
+            Vec3f vertexPos = posf(*vID);
+            float cur_distance = (pointModel - vertexPos).length();
+            if (cur_distance < distance) {
+                distance = cur_distance;
+                vid = *vID;
+            }
+        }
+        return true;
+        
+    }
+    
+    bool PAMManifold::closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid)
+    {
+        if (no_vertices() == 0) {
+            return false;
+        }
+        
+        float distance = FLT_MAX;
+        
+        //touchPoint to world coordinates
+        Vec3f touchPoint = viewMatrix.mul_3D_point(point);
+        Vec2f touchPoint2D = Vec2f(touchPoint[0], touchPoint[1]);
+        
+        for (VertexIDIterator vID = vertices_begin(); vID != vertices_end(); vID++)
+        {
+            Vec3f vertexPos = posf(*vID);
+            Vec3f glkVertextPosModelView = getModelViewMatrix().mul_3D_point(vertexPos);
+            Vec2f glkVertextPosModelView_2 = Vec2f(glkVertextPosModelView[0], glkVertextPosModelView[1]);
+            float cur_distance = length(touchPoint2D - glkVertextPosModelView_2);
+            
+            if (cur_distance < distance) {
+                distance = cur_distance;
+                vid = *vID;
+            }
+        }
+        return true;
+    }
+
+#pragma mark -  SMOOTHING
+    //get all neighbouring points for the given verticies
+    void PAMManifold::neighbours(std::set<HMesh::VertexID>& neighbours,
+                                 std::vector<HMesh::VertexID>& verticies,
+                                 float brush_size)
+    {
+        HalfEdgeAttributeVector<EdgeInfo> edge_info(allocated_halfedges());
+        
+        for (VertexID vID: verticies) {
+            Vec originPos = pos(vID);
+            queue<HalfEdgeID> hq;
+            edge_info.clear();
+            
+            neighbours.insert(vID);
+            circulate_vertex_ccw(*this, vID, [&](Walker w) {
+                neighbours.insert(w.vertex());
+                edge_info[w.halfedge()] = EdgeInfo(SPINE, 0);
+                edge_info[w.opp().halfedge()] = EdgeInfo(SPINE, 0);
+                hq.push(w.opp().halfedge());
+            });
+            
+            while(!hq.empty())
+            {
+                HalfEdgeID h = hq.front();
+                Walker w = walker(h);
+                hq.pop();
+                
+                for (;!w.full_circle(); w = w.circulate_vertex_ccw()) {
+                    if(edge_info[w.halfedge()].edge_type == UNKNOWN)
+                    {
+                        Vec p = pos(w.vertex());
+                        float d = (p - originPos).length();
+                        if (d <= brush_size) {
+                            neighbours.insert(w.vertex());
+                            //                        neighbours.insert(w.opp().vertex());
+                            
+                            edge_info[w.halfedge()] = EdgeInfo(SPINE,0);
+                            edge_info[w.opp().halfedge()] = EdgeInfo(SPINE,0);
+                            
+                            hq.push(w.opp().halfedge());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    //get all neighbouring points for the given verticies
+    void PAMManifold::neighbours(std::vector<HMesh::VertexID>& neighbours,
+                                 HMesh::VertexID vID,
+                                 std::vector<float>& weights,
+                                 float brush_size)
+    {
+        HalfEdgeAttributeVector<EdgeInfo> edge_info(allocated_halfedges());
+        
+        Vec originPos = pos(vID);
+        queue<HalfEdgeID> hq;
+        edge_info.clear();
+        
+        neighbours.push_back(vID);
+        weights.push_back(1.0);
+        circulate_vertex_ccw(*this, vID, [&](Walker w) {
+            neighbours.push_back(w.vertex());
+            weights.push_back(1.0);
+            edge_info[w.halfedge()] = EdgeInfo(SPINE, 0);
+            edge_info[w.opp().halfedge()] = EdgeInfo(SPINE, 0);
+            hq.push(w.opp().halfedge());
+        });
+        
+        while(!hq.empty())
+        {
+            HalfEdgeID h = hq.front();
+            Walker w = walker(h);
+            hq.pop();
+            
+            for (;!w.full_circle(); w = w.circulate_vertex_ccw()) {
+                if(edge_info[w.halfedge()].edge_type == UNKNOWN)
+                {
+                    Vec p = pos(w.vertex());
+                    float d = (p - originPos).length();
+                    if (d <= brush_size) {
+                        float d = (p - originPos).length();
+                        float x = d/brush_size;
+                        float weight = pow(pow(x, 2) - 1, 2);
+                        
+                        weights.push_back(weight);
+                        neighbours.push_back(w.vertex());
+                        //                        neighbours.insert(w.opp().vertex());
+                        
+                        edge_info[w.halfedge()] = EdgeInfo(SPINE,0);
+                        edge_info[w.opp().halfedge()] = EdgeInfo(SPINE,0);
+                        
+                        hq.push(w.opp().halfedge());
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    //Smooth according to number of edges from the vertex
+    void PAMManifold::smoothPole(HMesh::VertexID vID, int depth, int iter)
+    {
+        assert(is_pole(*this, vID));
+        Walker w = walker(vID);
+        int cur_depth = 0;
+        vector<VertexID> allVert;
+        allVert.push_back(vID);
+        while (cur_depth <= depth) {
+            vector<VertexID> vert = verticies_along_the_rib(*this, w.next().halfedge(), edgeInfo);
+            allVert.insert(allVert.end(), vert.begin(), vert.end());
+            w = w.next().opp().next();
+            cur_depth++;
+        }
+        laplacian_spine_smooth_verticies(*this, allVert, edgeInfo, iter);
+    }
+
+    //Smooth verticies along the rib. If isSpine is YES, edge_info must be valid
+    std::set<HMesh::VertexID> PAMManifold::smoothAlongRib(HMesh::HalfEdgeID rib,
+                                                          int iter,
+                                                          bool isSpine,
+                                                          float brushSize)
+    {
+        vector<VertexID> vIDs;
+        for (Walker w = walker(rib); !w.full_circle(); w = w.next().opp().next()) {
+            vIDs.push_back(w.vertex());
+        }
+        set<VertexID> affectedVerticies = smoothVerticies(vIDs,iter,isSpine,brushSize);
+        return affectedVerticies;
+    }
+    
+    //Smooth at multiple verticies
+    std::set<HMesh::VertexID> PAMManifold::smoothVerticies(std::vector<HMesh::VertexID> vIDs,
+                                                           int iter,
+                                                           bool isSpine,
+                                                           float brushSize)
+    {
+        set<VertexID> allVerticiesSet;
+        neighbours(allVerticiesSet,vIDs,brushSize);
+        
+        if (isSpine) {
+            laplacian_spine_smooth_verticies(*this, allVerticiesSet, edgeInfo, iter);
+        } else {
+            laplacian_smooth_verticies(*this, allVerticiesSet, iter);
+        }
+        return allVerticiesSet;
+    }
+
+    
 #pragma mark - BODY CREATION
     
     bool PAMManifold::createBody(std::vector<CGLA::Vec3f>& polyline1,
@@ -615,11 +767,11 @@ namespace PAMMesh
         }
         
         populateManifold(allRibs);
+        buildKDTree();
         bufferVertexDataToGPU();
         traceEdgeInfo();
         return true;
     }
-
     
     void PAMManifold::populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs)
     {
@@ -729,7 +881,6 @@ namespace PAMMesh
     void PAMManifold::endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
                                             CGLA::Vec3f firstPoint,
                                             bool touchedModelStart,
-                                            bool shouldStick,
                                             float touchSize)
                                             
     {
@@ -757,12 +908,6 @@ namespace PAMMesh
             return;
         }
 
-        //Create new pole
-        VertexID newPoleID;
-        float bWidth;
-        Vec3f holeCenter, holeNorm;
-        HalfEdgeID boundaryHalfEdge;
-        
         int limbWidth = branchWidthForAngle(40*DEGREES_TO_RADIANS, touchedVID);
         if (limbWidth <= 1 ) {
             return;
@@ -770,13 +915,13 @@ namespace PAMMesh
         RA_LOG_INFO("Limb Width: %i", limbWidth);
         
 //        [self saveState]; //TODO add save state
-        bool result = createHoleAtVertex(touchedVID,
-                                         limbWidth,
-                                         newPoleID,
-                                         bWidth,
-                                         holeCenter,
-                                         holeNorm,
-                                         boundaryHalfEdge);
+        //Create new pole
+        VertexID newPoleID;
+        float bWidth;
+        Vec3f holeCenter, holeNorm;
+        HalfEdgeID boundaryHalfEdge;
+        bool result = createHoleAtVertex(touchedVID, limbWidth, newPoleID, bWidth,
+                                         holeCenter, holeNorm, boundaryHalfEdge);
         
         if (!result) {
 //            [self undo];
@@ -784,35 +929,30 @@ namespace PAMMesh
         }
         
         //closest to the first centroid between two fingers vertex in 2D space
-        Vec3f touchedV_world = getModelViewMatrix().mul_3D_point(holeCenter);
-        float zValueTouched = touchedV_world[2];
+        Mat4x4f mvMatrix = getModelViewMatrix();
+        Vec3f holeCenterWorld = mvMatrix.mul_3D_point(holeCenter);
         //add depth to skeleton points. Interpolate if needed
-        for_each(rawSkeleton.begin(), rawSkeleton.end(), [&](Vec3f &v){v = Vec3f(v[0], v[1], zValueTouched);});
+        for_each(rawSkeleton.begin(), rawSkeleton.end(), [&](Vec3f &v){v = Vec3f(v[0], v[1], holeCenterWorld[2]);});
         
         //Smooth
         vector<Vec3f> skeleton;
         laplacianSmoothing(rawSkeleton, skeleton, 3, 0.5);
         
         //Skeleton should start from the branch point
-        Vec3f translate = touchedV_world - skeleton[0];
+        Vec3f translate = holeCenterWorld - skeleton[0];
         for_each(skeleton.begin(), skeleton.end(), [&](Vec3f &v){v += translate;});
         
         //Length
         float totalLength = 0;
-        Vec3f lastSkelet = skeleton[0];
         for (int i = 1; i < skeleton.size(); i++) {
-            totalLength += length(lastSkelet - skeleton[i]);
-            lastSkelet = skeleton[i];
+            totalLength += length(skeleton[i-1] - skeleton[i]);
         }
         
         float deformLength = 0.1f * totalLength;
         int deformIndex = 0;
         totalLength = 0;
-        lastSkelet = skeleton[0];
-        
         for (int i = 1; i < skeleton.size(); i++) {
-            totalLength += length(lastSkelet - skeleton[i]);
-            lastSkelet = skeleton[i];
+            totalLength += length(skeleton[i-1] - skeleton[i]);
             if (totalLength > deformLength) {
                 deformIndex = i + 1;
                 break;
@@ -820,8 +960,8 @@ namespace PAMMesh
         }
         
         //Move branch by weighted norm
-        Vec3f holeNormWorld = normalize(getModelViewMatrix().mul_3D_vector(holeNorm));
-        holeNormWorld = deformLength*holeNormWorld;
+        Vec3f holeNormWorld = normalize(mvMatrix.mul_3D_vector(holeNorm));
+        holeNormWorld = deformLength * holeNormWorld;
         for (int i = 0; i < skeleton.size(); i++) {
             if (i < deformIndex) {
                 float x = (float)i/(float)deformIndex;
@@ -841,11 +981,7 @@ namespace PAMMesh
         //Ingore first and last centroids since they are poles
         int numSpines = limbWidth*2;
         vector<vector<Vec3f>> allRibs(skeleton.size());
-        vector<Vec3f> skeletonModel;
-        vector<Vec3f> skeletonNormalsModel;
-        
-        Mat4x4f modelViewMatrix = getModelViewMatrix();
-        Mat4x4f invertModelViewMatrix = invert_affine(modelViewMatrix);
+        Mat4x4f invertModelViewMatrix = invert_affine(mvMatrix);
         
         for (int i = 0; i < skeleton.size(); i++) {
             Vec3f sModel = invertModelViewMatrix.mul_3D_point(skeleton[i]);
@@ -854,18 +990,6 @@ namespace PAMMesh
             Vec3f tModel = invertModelViewMatrix.mul_3D_vector(skeletonTangents[i]);
             tModel = ribWidth*normalize(tModel);
             nModel = ribWidth*normalize(nModel);
-            
-            skeletonModel.push_back(sModel);
-            
-            //        vector<GLKVector3>norm;
-            //        norm.push_back(sModel);
-            //        norm.push_back(GLKVector3Add(sModel, nModel));
-            //        allRibs.push_back(norm);
-            //
-            //        vector<GLKVector3>tangent;
-            //        tangent.push_back(sModel);
-            //        tangent.push_back(GLKVector3Add(sModel, tModel));
-            //        allRibs.push_back(tangent);
             
             if (i == skeleton.size() - 1) {
                 vector<Vec3f> secondPole;
@@ -924,42 +1048,46 @@ namespace PAMMesh
         HalfEdgeID newBranchUpperRibEdge = lowerBoundaryWalker.opp().halfedge();
         stitchBranchToBody(boundaryHalfEdge,newBranchLowerRibEdge);
         
-//        //smooth at the bottom
-//        float smoothinCoefficient = PAMSettingsManager::getInstance().smoothingBrushSize;
-//        int iterations = PAMSettingsManager::getInstance().baseSmoothingIterations;
-//        traceEdgeInfo();
-//
-//        float radius = rib_radius(*this, newBranchUpperRibEdge, edgeInfo);
-//        set<VertexID> affectedVerticies;
-//        if (!PAMSettingsManager::getInstance().spineSmoothing) {
-//            affectedVerticies = [self smoothAlongRib:newBranchUpperRibEdge iter:iterations isSpine:NO brushSize:smoothinCoefficient*radius edgeInfo:_edgeInfo];
-//        } else {
-//            affectedVerticies = [self smoothAlongRib:newBranchUpperRibEdge iter:iterations isSpine:YES brushSize:smoothinCoefficient*radius edgeInfo:_edgeInfo];
-//        }
-        
+        //smooth at the bottom
+        float smoothinCoefficient = PAMSettingsManager::getInstance().smoothingBrushSize;
+        int iterations = PAMSettingsManager::getInstance().baseSmoothingIterations;
+        traceEdgeInfo();
 
-//        
-//        //smooth at the pole if needed
-//        if ([SettingsManager sharedInstance].poleSmoothing) {
-//            for (VertexID vID: newVerticies) {
-//                if (is_pole(_manifold, vID)) {
-//                    Walker wBaseEnd = _manifold.walker(vID);
-//                    HalfEdgeID pole_rib = wBaseEnd.next().halfedge();
-//                    float radius = rib_radius(_manifold, pole_rib, _edgeInfo);
-//                    vector<HMesh::VertexID> verticiesToSmooth;
-//                    for (Walker w = _manifold.walker(pole_rib); !w.full_circle(); w = w.next().opp().next()) {
-//                        verticiesToSmooth.push_back(w.vertex());
-//                    }
-//                    verticiesToSmooth.push_back(vID);
-//                    [self smoothVerticies:verticiesToSmooth iter:7 isSpine:YES brushSize:radius edgeInfo:_edgeInfo];
-//                    break;
-//                }
-//            }
-//        }
+        float radius = rib_radius(*this, newBranchUpperRibEdge, edgeInfo);
+        set<VertexID> affectedVerticies;
+        if (!PAMSettingsManager::getInstance().spineSmoothing) {
+            affectedVerticies = smoothAlongRib(newBranchUpperRibEdge,
+                                               iterations,
+                                               false,
+                                               smoothinCoefficient*radius);
+        } else {
+            affectedVerticies = smoothAlongRib(newBranchUpperRibEdge,
+                                               iterations,
+                                               true,
+                                               smoothinCoefficient*radius);
+        }
         
+        //smooth at the pole if needed
+        if (PAMSettingsManager::getInstance().poleSmoothing) {
+            for (VertexID vID: newVerticies) {
+                if (is_pole(*this, vID)) {
+                    Walker wBaseEnd = walker(vID);
+                    HalfEdgeID pole_rib = wBaseEnd.next().halfedge();
+                    float radius = rib_radius(*this, pole_rib, edgeInfo);
+                    vector<HMesh::VertexID> verticiesToSmooth;
+                    for (Walker w = walker(pole_rib); !w.full_circle(); w = w.next().opp().next()) {
+                        verticiesToSmooth.push_back(w.vertex());
+                    }
+                    verticiesToSmooth.push_back(vID);
+                    smoothVerticies(verticiesToSmooth,7,true,radius);
+                    break;
+                }
+            }
+        }
+        
+        buildKDTree();
         bufferVertexDataToGPU();
         traceEdgeInfo();
-//        [self rebufferWithCleanup:YES bufferData:YES edgeTrace:YES];
     }
     
     int PAMManifold::branchWidthForAngle(float angle, HMesh::VertexID vID)
@@ -1518,6 +1646,8 @@ namespace PAMMesh
             updateVertexNormOnGPU_Vector(allAffectedVerticies);
         }
     }
+    
+#pragma mark -  UPDATE GPU DATA
     
     void PAMManifold::updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies)
     {

@@ -30,6 +30,7 @@ namespace PAMMesh
 
         void setupShaders();
         
+        void updateMesh();
         void draw() const override;
         void drawToDepthBuffer();
         
@@ -79,13 +80,11 @@ namespace PAMMesh
                         float zCoord,
                         std::vector<std::vector<CGLA::Vec3f>>& debugAllRibs,
                         bool debug);
+        
 #pragma mark - BRANCH CREATION
-//        void startCreateBranch(CGLA::Vec3f touchPoint, CGLA::Vec3f closestPoint);
-//        void continueCreateBranch(CGLA::Vec3f touchPoint);
         void endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
                                    CGLA::Vec3f firstPoint,
                                    bool touchedModel,
-                                   bool shouldStick,
                                    float touchSize);
 
 #pragma mark - BUMP CREATION
@@ -99,12 +98,13 @@ namespace PAMMesh
                                    bool anisotropic);
         void changeScalingSingleRib(float scale);
         void endScalingSingleRib(float scale);
-        void updateMesh();
+
     private:
         
         std::map<HMesh::VertexID, int> vertexIDtoIndex;
         Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree;
         HMesh::HalfEdgeAttributeVector<EdgeInfo> edgeInfo;
+        
         std::vector<HMesh::HalfEdgeID> _edges_to_scale;
         std::vector<HMesh::VertexID> _sculpt_verticies_to_scale;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _current_scale_position;
@@ -115,11 +115,9 @@ namespace PAMMesh
         float _scaleFactor;
         
         void bufferVertexDataToGPU();
+        
         void traceEdgeInfo();
         
-        bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
-        bool closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
-
         void getVertexData(CGLA::Vec3f*& vertexPositions,
                            CGLA::Vec3f*& vertexNormals,
                            CGLA::Vec4uc*& vertexColors,
@@ -127,47 +125,56 @@ namespace PAMMesh
                            CGLA::Vec4uc*& wireframeColor,
                            std::vector<unsigned int>*& wireframeIndicies);
         
+#pragma mark - BODY CREATION
         void populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs);
+        
         int indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib);
-        
-        void updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
-        void updateVertexNormOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
-        void updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies);
-        void updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies);
-        
-        
+
+#pragma mark - BRANCH CREATION
         int branchWidthForAngle(float angle, HMesh::VertexID vID);
-        bool createHoleAtVertex(HMesh::VertexID vID,
-                                int width,
-                                HMesh::VertexID& newPoleID,
-                                float& bWidth,
-                                CGLA::Vec3f& holeCenter,
-                                CGLA::Vec3f& holeNorm,
-                                HMesh::HalfEdgeID& boundayHalfEdge);
-        bool createBranchAtVertex(HMesh::VertexID vID,
-                                  int numOfSegments,
-                                  HMesh::VertexID& newPoleID,
-                                  float& bWidth);
         
-        void populateNewLimb(std::vector<std::vector<CGLA::Vec3f>>& allRibs,
-                             std::vector<CGLA::Vec3f>& vertices,
-                             std::vector<int>& faces,
-                             std::vector<int>& indices);
+        bool createHoleAtVertex(HMesh::VertexID vID,int width,HMesh::VertexID& newPoleID,float& bWidth,
+                                CGLA::Vec3f& holeCenter,CGLA::Vec3f& holeNorm,HMesh::HalfEdgeID& boundayHalfEdge);
+        
+        bool createBranchAtVertex(HMesh::VertexID vID,int numOfSegments,HMesh::VertexID& newPoleID,float& bWidth);
+        
+        void populateNewLimb(std::vector<std::vector<CGLA::Vec3f>>& allRibs,std::vector<CGLA::Vec3f>& vertices,
+                             std::vector<int>& faces,std::vector<int>& indices);
         
         void allVerticiesAndHalfEdges(std::vector<HMesh::VertexID>& verticies,
-                                      std::vector<HMesh::HalfEdgeID>& halfedges,
-                                      HMesh::VertexID vID);
+                                      std::vector<HMesh::HalfEdgeID>& halfedges,HMesh::VertexID vID);
         
         bool boundaryHalfEdgeForClonedMesh(HMesh::HalfEdgeID& boundaryHalfedge,
                                            std::vector<HMesh::HalfEdgeID>& newHalfEdges);
-
+        
         void stitchBranchToBody(HMesh::HalfEdgeID branchHID,HMesh::HalfEdgeID bodyHID);
-
+        
         int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
-
         
+#pragma mark - UTILITIES
+        bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
         
-
+        bool closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
+        
+#pragma mark - SMOOTHING
+        void neighbours(std::set<HMesh::VertexID>& neighbours, std::vector<HMesh::VertexID>& verticies, float brush_size);
+        
+        void neighbours(std::vector<HMesh::VertexID>& neighbours, HMesh::VertexID vID, std::vector<float>& weights, float brush_size);
+        
+        void smoothPole(HMesh::VertexID vID, int depth, int iter);
+        
+        std::set<HMesh::VertexID> smoothAlongRib(HMesh::HalfEdgeID rib, int iter, bool isSpine, float brushSize);
+        
+        std::set<HMesh::VertexID> smoothVerticies(std::vector<HMesh::VertexID> vIDs, int iter, bool isSpine, float brushSize);
+        
+#pragma mark -  UPDATE GPU DATA
+        void updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
+        
+        void updateVertexNormOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
+        
+        void updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies);
+        
+        void updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies);
     };
 }
 

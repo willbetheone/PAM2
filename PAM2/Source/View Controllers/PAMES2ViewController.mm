@@ -22,12 +22,6 @@
 
 #define SHOW_DEBUG_LINES 0
 
-typedef enum {
-    TOUCHED_NONE,
-    TOUCHED_MODEL,
-    TOUCHED_BACKGROUND
-} DrawingState;
-
 using namespace std;
 using namespace CGLA;
 using namespace PAMMesh;
@@ -50,9 +44,8 @@ using namespace RAEngine;
 //Gestures
 @interface PAMES2ViewController()
 {
-    UIPanGestureRecognizer* twoFingerTranslation;
-    
-    DrawingState _drawingState;
+    //Branch creation vars
+    bool isFirsPointOnAModel;
     Vec3f firstPoint;
 }
 @end
@@ -64,10 +57,12 @@ using namespace RAEngine;
     Bounds bounds;
     
     RABoundingBox* boundingBox;
+    
     RAPolyLine* polyline1;
-    vector<Vec3f> polyline1Data;
     RAPolyLine* polyline2;
+    vector<Vec3f> polyline1Data;
     vector<Vec3f> polyline2Data;
+    
     string* vShader;
     string* fShader;
     
@@ -97,8 +92,6 @@ using namespace RAEngine;
     fShader = new string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
     polyline1->setupShaders(*vShader, *fShader);
     polyline2->setupShaders(*vShader, *fShader);
-    
-    PAMSettingsManager::getInstance().transform = false;
 }
 
 - (void)viewDidUnload
@@ -147,7 +140,7 @@ using namespace RAEngine;
     twoFingerTap.numberOfTouchesRequired = 2;
     [view addGestureRecognizer:twoFingerTap];
     
-    // Side Rotation
+    //Side Rotation
     UIPanGestureRecognizer* oneFingerPanning = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleOneFingerPanGesture:)];
     oneFingerPanning.maximumNumberOfTouches = 1;
     [view addGestureRecognizer:oneFingerPanning];
@@ -161,16 +154,10 @@ using namespace RAEngine;
     [view addGestureRecognizer:pinchToZoom];
 
     //Translation
-    twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
+    UIPanGestureRecognizer* twoFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleTwoFingerPanGesture:)];
     twoFingerTranslation.minimumNumberOfTouches = 2;
     twoFingerTranslation.maximumNumberOfTouches = 2;
     [view addGestureRecognizer:twoFingerTranslation];
-    
-    //Tap
-    UITapGestureRecognizer* tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGestureRecognizer:)];
-    tapGesture.numberOfTapsRequired = 1;
-    tapGesture.numberOfTouchesRequired = 1;
-    [view addGestureRecognizer:tapGesture];
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -192,12 +179,6 @@ using namespace RAEngine;
     return state;
 }
 
--(void)handleTapGestureRecognizer:(UITapGestureRecognizer*)sender
-{
-//    Vec3f toucP;
-//    [self modelCoordinates:toucP forGesture:sender];
-}
-
 -(void)handleTwoFingeTapGesture:(UIGestureRecognizer*)sender
 {
     if (![self modelIsLoaded]) {
@@ -212,6 +193,7 @@ using namespace RAEngine;
     if (![self modelIsLoaded]) {
         return;
     }
+    
     if (PAMSettingsManager::getInstance().transform)
     {
         CGPoint cocoaTouch = [sender locationInView:sender.view];
@@ -223,85 +205,42 @@ using namespace RAEngine;
     {
         if (sender.state == UIGestureRecognizerStateBegan)
         {
-            _drawingState = TOUCHED_NONE;
-            
-            CGPoint touchPoint = [self touchPointFromGesture:sender];
-            Vec3f rayOrigin;
-            BOOL result = [self rayOrigin:rayOrigin forTouchPoint:touchPoint];
-            if (!result) {
-                RA_LOG_WARN("Touched background");
-                return;
-            }
             polyline1Data.clear();
-            polyline1Data.push_back(rayOrigin);
-            
-            //Start branch creation
+            CGPoint touchPoint = [self touchPointFromGesture:sender];
             GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
             float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
             
-            Vec3f modelCoord;
-            if (depth < 0)
-            { //clicked on background
-                BOOL result = [self modelCoordinates:modelCoord
-                                       forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, 0)];
-                if (!result) {
-                    RA_LOG_WARN("Touched background");
-                    return;
-                }
-                _drawingState = TOUCHED_BACKGROUND;
-            }
-            else
-            { //clicked on a model
-                BOOL result = [self modelCoordinates:modelCoord
-                                       forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)];
-                if (!result) {
-                    RA_LOG_WARN("Touched background");
-                    return;
-                }
-                _drawingState = TOUCHED_MODEL;
-            }
-            firstPoint = modelCoord;
-        }
-        else if (sender.state == UIGestureRecognizerStateChanged)
-        {
-            //Add touch point to a line
-            CGPoint touchPoint = [self touchPointFromGesture:sender];
-            Vec3f rayOrigin;
-            BOOL result = [self rayOrigin:rayOrigin forTouchPoint:touchPoint];
-            if (!result) {
+            if (![self modelCoordinates:firstPoint forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)]) {
                 RA_LOG_WARN("Touched background");
                 return;
             }
-            polyline1Data.push_back(rayOrigin);
             
-            if (polyline1Data.size() > 1) {
-                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-                polyline1->enabled = true;
-            }
+            isFirsPointOnAModel = (depth < 0) ? NO : YES;
+            delete[] pixelData;
         }
-        else if (sender.state == UIGestureRecognizerStateEnded)
+        
+        //Add touch point to a line
+        CGPoint touchPoint = [self touchPointFromGesture:sender];
+        Vec3f rayOrigin;
+        if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint]) {
+            RA_LOG_WARN("Touched background");
+            return;
+        }
+        polyline1Data.push_back(rayOrigin);
+        if (polyline1Data.size() > 1) {
+            polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+            polyline1->enabled = true;
+        }
+
+        if (sender.state == UIGestureRecognizerStateEnded ||
+            sender.state == UIGestureRecognizerStateCancelled ||
+            sender.state == UIGestureRecognizerStateFailed)
         {
             polyline1->enabled = false;
-            Vec3f modelCoord;
-            
-            BOOL touchedModelStart = _drawingState == TOUCHED_MODEL;
-
-            CGPoint touchPoint = [self touchPointFromGesture:sender];
-            Vec3f rayOrigin;
-            BOOL result = [self rayOrigin:rayOrigin forTouchPoint:touchPoint];
-            if (!result) {
-                RA_LOG_WARN("Touched background");
-                return;
-            }
-            polyline1Data.push_back(rayOrigin);
-            
-            float touchSize = [self touchSizeForGesture:sender];
             pamManifold->endCreateBranchBended(polyline1Data,
                                                firstPoint,
-                                               touchedModelStart,                                               
-                                               false,
-                                               touchSize);
-            _drawingState = TOUCHED_NONE;
+                                               isFirsPointOnAModel,
+                                               [self touchSizeForGesture:sender]);
         }
     }
 }
@@ -313,8 +252,7 @@ using namespace RAEngine;
     }
     
     GestureState state = [self gestureStateForRecognizer:sender];
-    float rotaion = [sender rotation];
-    rotManager->handleRotationGesture(state, rotaion, viewVolumeCenter);
+    rotManager->handleRotationGesture(state, [sender rotation], viewVolumeCenter);
 }
 
 -(void)handlePinchGesture:(UIPinchGestureRecognizer*)sender
@@ -521,7 +459,6 @@ using namespace RAEngine;
 //Load empty workspace
 -(void)loadEmptyMeshData
 {
-    [self setPaused:YES];
     bounds = {Vec3f(-1,-1,-1), Vec3f(1,1,1), Vec3f(0,0,0), 2*sqrtf(3.0f)/2.0f};
 
     GLfloat zNear = 1.0;
@@ -532,8 +469,6 @@ using namespace RAEngine;
     viewVolumeCenter = tV + bounds.center;
     
     [self setupBoundingBox];
-
-    [self setPaused:NO];
 }
 
 //Load initial mesh from OBJ file
@@ -547,6 +482,7 @@ using namespace RAEngine;
         if (pamManifold != nullptr) {
             delete pamManifold;
         }
+        
         pamManifold = new PAMManifold();
         pamManifold->setupShaders();
         pamManifold->loadObjFile(objPath.UTF8String);
@@ -585,10 +521,10 @@ using namespace RAEngine;
 
 -(void)update
 {
-    float diam = bounds.radius * 2.0f;
-    float rad = bounds.radius;
     GLfloat aspect = (GLfloat)_glWidth / (GLfloat)_glHeight;
     float scale = 1.0f/zoomManager->getScaleFactor();
+    float diam = bounds.radius * 2.0f;
+    float rad = bounds.radius;
     
     GLfloat left = viewVolumeCenter[0] - rad*aspect*scale;
     GLfloat right = viewVolumeCenter[0] + rad*aspect*scale;
@@ -765,7 +701,7 @@ using namespace RAEngine;
 
 -(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forTouchPoint:(CGPoint)touchPoint
 {
-    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+    Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0.01);
     Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
     int result = gluUnProjectf(rayStartWindow, projectionMatrix*viewMatrix, viewport, rayOrigin);
     if (result == 0 ) {
@@ -793,7 +729,9 @@ using namespace RAEngine;
     return touchSize;
 }
 
--(float)touchSizeForFingerSize:(float)touchSizeMM {
+-(float)touchSizeForFingerSize:(float)touchSizeMM
+{
+    //TODO change for non-retina displays
     const float mmToPx = 2048.0f/240.0f; //2048 px for 240 mm for retina display
     float touchSizePx = touchSizeMM * mmToPx;
     
