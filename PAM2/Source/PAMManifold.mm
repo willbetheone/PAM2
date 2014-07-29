@@ -406,7 +406,7 @@ namespace PAMMesh
             Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
             
             for (VertexID vID: _transformed_verticies) {
-                _current_rot_position[vID] = Vec3f(tMatrix.mul_3D_point(pos(vID)));
+                _current_rot_position[vID] = tMatrix.mul_3D_point(posf(vID));
             }
             
             positionDataBuffer->bind();
@@ -431,7 +431,83 @@ namespace PAMMesh
                 VertexID vid = it->first;
                 int lid = it->second;
                 Mat4x4f tMatrix = rotMatricies[lid];
-                Vec3f newPos = Vec3f(tMatrix.mul_3D_point(pos(vid)));
+                Vec3f newPos = tMatrix.mul_3D_point(posf(vid));
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), newPos.get(), sizeof(Vec3f));
+            }
+            
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
+        else if (modState == Modification::BRANCH_SCALING)
+        {
+            Mat4x4f toOrigin = translation_Mat4x4f(-1 * _centerOfRotation);
+            Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+            Mat4x4f scaleMatrix = scaling_Mat4x4f(Vec3f(_scaleFactor));
+            Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+            
+            for (VertexID vid: _transformed_verticies) {
+                _current_rot_position[vid] = tMatrix.mul_3D_point(posf(vid));
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _transformed_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            
+            //deformable area
+            map<int,Mat4x4f> scaleMatricies;
+            for (auto lid: _loopsToDeform) {
+                float weight = _ringToDeformValue[lid];
+                float scale = 1 + (_scaleFactor - 1)*weight;
+                Mat4x4f sMatrix = scaling_Mat4x4f(Vec3f(scale));
+                scaleMatricies[lid]=sMatrix;
+            }
+            
+            for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+                VertexID vid = it->first;
+                int lid = it->second;
+                
+                Mat4x4f scaleMatrix = scaleMatricies[lid];
+                Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+                Vec3f newPos = tMatrix.mul_3D_point(posf(vid));
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), newPos.get(), sizeof(Vec3f));
+            }
+            
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+        }
+        else if (modState == Modification::BRANCH_TRANSLATION)
+        {
+            Mat4x4f translationMatrix = translation_Mat4x4f(_translationCurrent);
+            
+            for (VertexID vid: _transformed_verticies) {
+                _current_rot_position[vid] = translationMatrix.mul_3D_point(posf(vid));;
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _transformed_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            
+            //deformable area
+            map<int,Mat4x4f> scaleMatricies;
+            for (auto lid: _loopsToDeform) {
+                scaleMatricies[lid]= translation_Mat4x4f(_ringToDeformValue[lid] * _translationCurrent);;
+            }
+            
+            for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+                VertexID vid = it->first;
+                int lid = it->second;
+                Vec3f newPos = scaleMatricies[lid].mul_3D_point(posf(vid));
                 
                 int index = vertexIDtoIndex[vid];
                 memcpy(temp + index*sizeof(Vec3f), newPos.get(), sizeof(Vec3f));
@@ -2228,7 +2304,127 @@ namespace PAMMesh
             }
         }
     }
+
+#pragma mark - SCALING THE BRANCH TREE
+    void PAMManifold::startScalingBranch(CGLA::Vec3f touchPoint, float scale)
+    {
+        if (createPivotPoint(touchPoint)) {
+            if (setTransformedArea()) {
+                _scaleFactor = scale;
+                modState = Modification::BRANCH_SCALING;
+                _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+            }
+        }
+    }
     
+    void PAMManifold::continueScalingBranch(float scale)
+    {
+        _scaleFactor = scale;
+    }
+    
+    void PAMManifold::endScalingBranchTree(float scale)
+    {
+        if (modState != Modification::BRANCH_SCALING) {
+            return;
+        }
+        
+//        [self saveState];
+        
+        _scaleFactor = scale;
+        
+        Mat4x4f toOrigin = translation_Mat4x4f(-1 * _centerOfRotation);
+        Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+        Mat4x4f scaleMatrix = scaling_Mat4x4f(Vec3f(_scaleFactor));
+        Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+        
+        for (VertexID vid: _transformed_verticies) {
+            pos(vid) = tMatrix.mul_3D_point(pos(vid));
+        }
+        
+        //deformable area
+        map<int,Mat4x4f> scaleMatricies;
+        for (auto lid: _loopsToDeform) {
+            float weight = _ringToDeformValue[lid];
+            float scale = 1 + (_scaleFactor - 1)*weight;
+            Mat4x4f sMatrix = scaling_Mat4x4f(Vec3f(scale));
+            scaleMatricies[lid]=sMatrix;
+        }
+        
+        for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+            VertexID vid = it->first;
+            int lid = it->second;
+            
+            Mat4x4f scaleMatrix = scaleMatricies[lid];
+            Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+            
+            pos(vid) = tMatrix.mul_3D_point(pos(vid));
+        }
+        
+        modState = Modification::PIN_POINT_SET;
+        
+        updateVertexPositionOnGPU_Set(_transformed_verticies);
+        updateVertexPositionOnGPU_Vector(_transition_verticies);
+        changeVerticiesColor_Set(_transformed_verticies,false);
+        changeVerticiesColor_Vector(_transition_verticies,false);
+    }
+    
+#pragma mark - TRANSLATION OF THE BRANCH TREE
+    void PAMManifold::startTranslatingBranchTree(CGLA::Vec3f touchPoint, CGLA::Vec3f translation)
+    {
+        if (createPivotPoint(touchPoint)) {
+            if (setTransformedArea()) {
+                _translationStart = translation;
+                _translationCurrent = translation - _translationStart;
+                modState = Modification::BRANCH_TRANSLATION;
+                _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+            }
+        }
+    }
+    
+    void PAMManifold::continueTranslatingBranchTree(CGLA::Vec3f translation)
+    {
+        _translationCurrent = translation - _translationStart;
+        ;
+    }
+    
+    void PAMManifold::endTranslatingBranchTree(CGLA::Vec3f translation)
+    {
+        if (modState != Modification::BRANCH_TRANSLATION) {
+            return;
+        }
+        
+//        [self saveState];
+        
+        _translationCurrent = translation - _translationStart;
+        
+        Mat4x4f translationMatrix = translation_Mat4x4f(_translationCurrent);
+        
+        for (VertexID vid: _transformed_verticies) {
+            pos(vid) = translationMatrix.mul_3D_point(pos(vid));
+        }
+        
+        //deformable area
+        map<int,Mat4x4f> scaleMatricies;
+        for (auto lid: _loopsToDeform) {
+            scaleMatricies[lid]= translation_Mat4x4f(_ringToDeformValue[lid] * _translationCurrent);
+        }
+        
+        for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+            VertexID vid = it->first;
+            int lid = it->second;
+            pos(vid) = scaleMatricies[lid].mul_3D_point(pos(vid));
+        }
+        
+        modState = Modification::PIN_POINT_SET;
+        
+        rotateRingsFrom(_deformDirHalfEdge, _pivotHalfEdgeID);
+        
+        updateVertexPositionOnGPU_Set(_transformed_verticies);
+        updateVertexPositionOnGPU_Vector(_transition_verticies);
+        changeVerticiesColor_Set(_transformed_verticies,false);
+        changeVerticiesColor_Vector(_transition_verticies,false);
+    }
+
 #pragma mark -  UPDATE GPU DATA
     
     void PAMManifold::updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies)

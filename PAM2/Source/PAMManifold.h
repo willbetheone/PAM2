@@ -117,7 +117,17 @@ namespace PAMMesh
         void startBending(CGLA::Vec3f touchPoint, float angle);
         void continueBending(float angle);
         void endBendingWithAngle(float angle);
-        
+
+#pragma mark - SCALING THE BRANCH TREE
+        void startScalingBranch(CGLA::Vec3f touchPoint, float scale);
+        void continueScalingBranch(float scale);
+        void endScalingBranchTree(float scale);
+
+#pragma mark - TRANSLATION OF THE BRANCH TREE
+        void startTranslatingBranchTree(CGLA::Vec3f touchPoint, CGLA::Vec3f translation);
+        void continueTranslatingBranchTree(CGLA::Vec3f translation);
+        void endTranslatingBranchTree(CGLA::Vec3f translation);
+
     private:
         
         std::map<HMesh::VertexID, int> vertexIDtoIndex;
@@ -140,6 +150,10 @@ namespace PAMMesh
         std::map<int, float> _ringToDeformValue;
         HMesh::HalfEdgeID _deformDirHalfEdge;
         HMesh::HalfEdgeID _deformDirHalfEdgeEnd;
+        
+        //Translation
+        CGLA::Vec3f _translationStart;
+        CGLA::Vec3f _translationCurrent;
         
         //RIBS SCALING VARS
         float _scaleFactor;
@@ -196,10 +210,6 @@ namespace PAMMesh
         
         int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
 
-#pragma mark - ROTATING THE BRANCH TREE
-        void rotateRingsFrom(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
-        void rotateRingsFrom2(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
-        
 #pragma mark - PIVOT POINT METHODS
         bool toPivotFromPinDirection(HMesh::HalfEdgeID& toPivothID);
         bool setTransformedArea();
@@ -212,7 +222,10 @@ namespace PAMMesh
         std::set<HMesh::VertexID> allVerticiesInDirectionHID(HMesh::HalfEdgeID hID);
         
         std::set<HMesh::VertexID> allVerticiesInDirection(HMesh::Walker deleteDir);
-        
+
+#pragma mark - ROTATING THE BRANCH TREE
+        void rotateRingsFrom(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
+
 #pragma mark - SMOOTHING
         void neighbours(std::set<HMesh::VertexID>& neighbours, std::vector<HMesh::VertexID>& verticies, float brush_size);
         

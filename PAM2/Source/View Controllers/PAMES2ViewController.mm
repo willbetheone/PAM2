@@ -314,90 +314,132 @@ using namespace RAEngine;
     }
     else
     {
-        if ([self modelIsLoaded]) {
-            return;
-        }
-        
-        if (sender.state == UIGestureRecognizerStateBegan)
+        if (![self modelIsLoaded])
         {
-            polyline1Data.clear();
-            polyline2Data.clear();
-        }
-        
-        if (sender.numberOfTouches == 2)
-        {
-            CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            
-            Vec3f rayOrigin1, rayOrigin2;
-            BOOL result1 = [self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1];
-            BOOL result2 = [self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2];
-            if (!result1 || !result2) {
-                RA_LOG_WARN("Couldn't determine touch area");
-                return;
-            }
-            
-            polyline1Data.push_back(rayOrigin1);
-            polyline2Data.push_back(rayOrigin2);
-            
-            if (polyline1Data.size() > 1 && polyline2Data.size() > 1) {
-                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-                polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-                polyline1->enabled = true;
-                polyline2->enabled = true;
-            }
-        }
-        
-        if (sender.state == UIGestureRecognizerStateEnded ||
-            sender.state == UIGestureRecognizerStateFailed ||
-            sender.state == UIGestureRecognizerStateCancelled)
-        {
-            polyline1->enabled = false;
-            polyline2->enabled = false;
-            
-            if (pamManifold != nullptr) {
-                delete pamManifold;
-            }
-            pamManifold = new PAMManifold();
-            pamManifold->setupShaders();
-            vector<vector<Vec3f>> debugRibs;
-            if (pamManifold->createBody(polyline1Data, polyline2Data, 0, debugRibs, false))
+            if (sender.state == UIGestureRecognizerStateBegan)
             {
-                pamManifold->enabled = true;
+                polyline1Data.clear();
+                polyline2Data.clear();
+            }
+            
+            if (sender.numberOfTouches == 2)
+            {
+                CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
+                                                     inView:(GLKView*)sender.view];
+                CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
+                                                     inView:(GLKView*)sender.view];
                 
-                GLfloat zNear = 1.0;
-                GLfloat newOriginZ = -1*(zNear + bounds.radius);
-                GLfloat curOriginZ = bounds.center[2];
-                
-                pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-                
-                [self setupBoundingBox];
-                
-#if SHOW_DEBUG_LINES
-                clearVector(debugPolylines);
-                for (int i = 0; i < debugRibs.size();i++) {
-                    vector<Vec3f> rib = debugRibs[i];
-                    if (rib.size() < 2) {
-                        continue;
-                    }
-                    RAPolyLine* p = new RAPolyLine();
-                    p->setupShaders(*vShader, *fShader);
-                    p->bufferVertexDataToGPU(rib, Vec4uc(0,0,255,255), Vec4uc(0,255,0,255), GL_LINES);
-                    
-                    p->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
-                    p->enabled = true;
-                    debugPolylines.push_back(p);
+                Vec3f rayOrigin1, rayOrigin2;
+                BOOL result1 = [self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1];
+                BOOL result2 = [self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2];
+                if (!result1 || !result2) {
+                    RA_LOG_WARN("Couldn't determine touch area");
+                    return;
                 }
-                //                PAMSettingsManager::getInstance().transform = true;
-#endif
+                
+                polyline1Data.push_back(rayOrigin1);
+                polyline2Data.push_back(rayOrigin2);
+                
+                if (polyline1Data.size() > 1 && polyline2Data.size() > 1) {
+                    polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                    polyline2->bufferVertexDataToGPU(polyline2Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                    polyline1->enabled = true;
+                    polyline2->enabled = true;
+                }
             }
-            else
+            
+            if (sender.state == UIGestureRecognizerStateEnded ||
+                sender.state == UIGestureRecognizerStateFailed ||
+                sender.state == UIGestureRecognizerStateCancelled)
             {
-                delete pamManifold;
-                pamManifold = nullptr;
+                polyline1->enabled = false;
+                polyline2->enabled = false;
+                
+                if (pamManifold != nullptr) {
+                    delete pamManifold;
+                }
+                pamManifold = new PAMManifold();
+                pamManifold->setupShaders();
+                vector<vector<Vec3f>> debugRibs;
+                if (pamManifold->createBody(polyline1Data, polyline2Data, 0, debugRibs, false))
+                {
+                    pamManifold->enabled = true;
+                    
+                    GLfloat zNear = 1.0;
+                    GLfloat newOriginZ = -1*(zNear + bounds.radius);
+                    GLfloat curOriginZ = bounds.center[2];
+                    
+                    pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                    
+                    [self setupBoundingBox];
+                    
+#if SHOW_DEBUG_LINES
+                    clearVector(debugPolylines);
+                    for (int i = 0; i < debugRibs.size();i++) {
+                        vector<Vec3f> rib = debugRibs[i];
+                        if (rib.size() < 2) {
+                            continue;
+                        }
+                        RAPolyLine* p = new RAPolyLine();
+                        p->setupShaders(*vShader, *fShader);
+                        p->bufferVertexDataToGPU(rib, Vec4uc(0,0,255,255), Vec4uc(0,255,0,255), GL_LINES);
+                        
+                        p->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                        p->enabled = true;
+                        debugPolylines.push_back(p);
+                    }
+                    //                PAMSettingsManager::getInstance().transform = true;
+#endif
+                }
+                else
+                {
+                    delete pamManifold;
+                    pamManifold = nullptr;
+                }
             }
+        }
+        else
+        {
+            CGPoint touchPoint = [self scaleTouchPoint:[sender locationInView:sender.view]
+                                                inView:(GLKView*)sender.view];
+            Vec3f rayStartWindow = Vec3f(touchPoint.x, touchPoint.y, 0);
+            Vec4f viewport = Vec4f(0, 0, _glWidth, _glHeight);
+            Vec3f rayOrigin;
+            gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
+            Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
+            axis = invert_affine(viewMatrix).mul_3D_vector(axis);
+            if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET ||
+                pamManifold->modState == PAMManifold::Modification::BRANCH_TRANSLATION )
+            {
+                if (sender.state == UIGestureRecognizerStateBegan) {
+                    Vec3f modelCoord;
+                    if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                        RA_LOG_WARN("Touched background");
+                        return;
+                    }
+                    pamManifold->startTranslatingBranchTree(modelCoord, axis);
+                } else if (sender.state == UIGestureRecognizerStateChanged) {
+                    pamManifold->continueTranslatingBranchTree(axis);
+                } else if (sender.state == UIGestureRecognizerStateEnded) {
+                    pamManifold->endTranslatingBranchTree(axis);
+                }
+            } else if (pamManifold->modState == PAMManifold::Modification::NONE ||
+                       pamManifold->modState == PAMManifold::Modification::BRANCH_POSE_TRANSLATE)
+            {
+                if (sender.state == UIGestureRecognizerStateBegan) {
+                    Vec3f modelCoord;
+                    if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                        RA_LOG_WARN("Touched background");
+                        return;
+                    }
+//                    [_pMesh statePosingTranslateWithTouchPoint:modelCoord translation:translation];
+                } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                    [_pMesh continuePosingTranslate:translation];
+                } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                    [_pMesh endPosingTranslate:translation];
+                }
+            }
+
         }
     }
 }
@@ -496,11 +538,11 @@ using namespace RAEngine;
                     RA_LOG_WARN("Touched background");
                     return;
                 }
-//                [_pMesh startScalingBranchTreeWithTouchPoint:modelCoord scale:pinch.scale];
+                pamManifold->startScalingBranch(modelCoord, sender.scale);
             } else if (sender.state == UIGestureRecognizerStateChanged) {
-//                [_pMesh continueScalingBranchTreeWithScale:pinch.scale];
+                pamManifold->continueScalingBranch(sender.scale);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
-//                [_pMesh endScalingBranchTreeWithScale:pinch.scale];
+                pamManifold->endScalingBranchTree(sender.scale);
             }
         }
         else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE ||
