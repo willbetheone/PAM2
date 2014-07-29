@@ -320,6 +320,84 @@ namespace PAMMesh
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
+        else if (modState == Modification::SCULPTING_BUMP_CREATION)
+        {
+            for (VertexID vid: _bump_verticies)
+            {
+                float weight = _bump_verticies_weigths[vid];
+                float depth;
+                if (_bumpBrushDepth < 1) {
+                    depth = 1 - _bumpBrushDepth;
+                } else {
+                    depth = -1*(_bumpBrushDepth - 1);
+                }
+                _bump_current_displacement[vid] = Vec3f(pos(vid) + depth*_bumpDirection*weight);
+            }
+            
+            for (VertexID v: _bump_verticies)
+            {
+                Vec3f p0 = _bump_current_displacement[v];
+                
+                vector<Vec3f> one_ring;
+                
+                // run through outgoing edges, and store them normalized
+                circulate_vertex_ccw(*this, v, (std::function<void(VertexID)>)[&](VertexID vn) {
+                    Vec3f edge;
+                    if(_bump_current_displacement_vid_is_set[vn]) {
+                        edge = _bump_current_displacement[vn] - p0;
+                    } else {
+                        edge = posf(vn) - p0;
+                    }
+                    
+                    double l = length(edge);
+                    if(l > 0.0)
+                        one_ring.push_back(edge/l);
+                });
+                int N = one_ring.size();
+                
+                size_t N_count = N;
+                size_t N_start = 0;
+                if(boundary(*this, v))
+                    N_start = 1;
+                
+                // sum up the normals of each face surrounding the vertex
+                Vec3f n(0);
+                for(size_t i = N_start; i < N_count; ++i){
+                    Vec3f e0 = one_ring[i];
+                    Vec3f e1 = one_ring[(i+1) % N];
+                    
+                    Vec3f n_part = normalize(cross(e0, e1));
+                    n += n_part * acos(max(-1.0, fmin(1.0, dot(e0, e1))));
+                }
+                
+                // normalize and return the normal
+                float sqr_l = sqr_length(n);
+                if(sqr_l > 0.0f)
+                    n = n / sqrt(sqr_l);
+                
+                _bump_current_norms[v] = n;
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _bump_verticies) {
+                Vec3f pos = _bump_current_displacement[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            
+            normalDataBuffer->bind();
+            unsigned char* tempnorm = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _bump_verticies) {
+                Vec3f norm = _bump_current_norms[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(tempnorm + index*sizeof(Vec3f), norm.get(), sizeof(Vec3f));
+            }
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
+
     }
     
     void PAMManifold::subdivide()
@@ -1435,26 +1513,76 @@ namespace PAMMesh
         }
     }
 
+#pragma mark - BUMP CREATION
+    void PAMManifold::startBumpCreation(CGLA::Vec3f touchPoint,
+                                        float brushSize,
+                                        float brushDepth)
+    {
+        VertexID touchedVID;
+        closestVertexID_3D(touchPoint, touchedVID);
+        Vec touchedPos = pos(touchedVID);
+        Vec norm = HMesh::normal(*this, touchedVID);
+        Vec displace = 0.05*norm;
+        
+        _bumpDirection = displace;
+        _bumpBrushDepth = brushDepth;
+        _bump_verticies_weigths = VertexAttributeVector<float>(no_vertices());
+        _bump_current_displacement = VertexAttributeVector<Vec3f>(no_vertices());
+        _bump_current_displacement_vid_is_set = VertexAttributeVector<int>(no_vertices(), 0);
+        _bump_current_norms = VertexAttributeVector<Vec3f>(no_vertices());
+        _bump_verticies.clear();
+        
+        vector<VertexID> oneVertex;
+        oneVertex.push_back(touchedVID);
+        neighbours(_bump_verticies, oneVertex,brushSize);
+        
+        for (VertexID vid: _bump_verticies)
+        {
+            double l = (touchedPos - pos(vid)).length();
+            float x = l/brushSize;
+            if (x <= 1) {
+                float weight = pow(pow(x,2)-1, 2);
+                _bump_verticies_weigths[vid] = weight;
+            }
+            _bump_current_displacement_vid_is_set[vid] = 1;
+        }
+        //    [self changeVerticiesColor_Set:_bump_verticies toSelected:YES];
+        modState = Modification::SCULPTING_BUMP_CREATION;
+    }
+    
+    void PAMManifold::continueBumpCreation(float brushDepth)
+    {
+        _bumpBrushDepth = brushDepth;
+    }
+    
+    void PAMManifold::endBumpCreation()
+    {
+//        [self saveState];
+        
+        for (VertexID vid: _bump_verticies)
+        {
+            pos(vid) = Vec(_bump_current_displacement[vid]);
+        }
+        
+        updateVertexPositionOnGPU_Set(_bump_verticies);
+        updateVertexNormOnGPU_Set(_bump_verticies);
+
+        modState = Modification::NONE;
+    }
 
     
 #pragma mark - RIB SCALING
     void PAMManifold::startScalingSingleRib(CGLA::Vec3f touchPoint,
                                             bool secondPointOnTheModel,
                                             float scale,
-                                            float velocity,
                                             float touchSize,
                                             bool anisotropic)
     {
-        
         VertexID vID;
-        closestVertexID_2D(touchPoint, vID);
-        //    if ([SettingsManager sharedInstance].sculptScalingType == SilhouetteScaling) {
-        //        vID = [self closestVertexID_2D:touchPoint];
-        //    } else {
-        ////        GLKVector3 middlePoint = GLKVector3Lerp(touchPoint1, touchPoint2, 0.5f);
-        //        vID = [self closestVertexID_2D:touchPoint];
-        //    }
-        
+        if (!closestVertexID_3D(touchPoint, vID)) {
+            return;
+        }
+
         if (is_pole(*this, vID)) {
             return;
         }
@@ -1548,7 +1676,6 @@ namespace PAMMesh
                 } else {
                     weight = 0;
                 }
-                //            NSLog(@"%f", weight);
                 _scale_weight_vector.push_back(weight);
             }
         }
@@ -1584,24 +1711,12 @@ namespace PAMMesh
                 Vec3f zWorld = Vec3f(0, 0, 1);
                 Vec3f to_silhouette_axis_world = cross(zWorld, nGLKWorld);
                 
-                
-                //
-                //            if (secondPointOnTheModel) {
-                //
-                //            }
-                //            GLKVector3 touchPoint2World = [Utilities matrix4:self.modelViewMatrix multiplyVector3:touchPoint2];
-                //            touchPoint2World.z = to_silhouette_axis_world.z;
-                //            GLKVector3 touchPoint2
-                
                 Vec3f to_silhouette_axis_model = invert_affine(getModelViewMatrix()).mul_3D_vector(to_silhouette_axis_world);
                 to_silhouette_axis_model = normalize(to_silhouette_axis_model);
                 Vec to_silhouette_axis = Vec(to_silhouette_axis_model[0],
                                              to_silhouette_axis_model[1],
                                              to_silhouette_axis_model[2]);
                 
-                //            Vec silhouette = silhouette_Verticies[i];
-                //            Vec to_silhouette_axis = silhouette - center;
-                //            normalize(to_silhouette_axis);
                 HalfEdgeID ribID = _edges_to_scale[i];
                 for (Walker w = walker(ribID); !w.full_circle(); w = w.next().opp().next())
                 {
@@ -1610,7 +1725,7 @@ namespace PAMMesh
                     Vec proj = c * to_silhouette_axis;
                     if (secondPointOnTheModel) {
                         Vec toOrg = Vec(origin) - Vec(center);
-                        if (dot(toOrg, proj) < 0) {
+                        if (dot(toOrg, proj) > 0) {
                             proj = Vec(0,0,0);
                         }
                     }

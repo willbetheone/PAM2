@@ -93,12 +93,15 @@ namespace PAMMesh
                                    float angularWidth);
 
 #pragma mark - BUMP CREATION
-        
+        void startBumpCreation(CGLA::Vec3f touchPoint,
+                               float brushSize,
+                               float brushDepth);
+        void continueBumpCreation(float brushDepth);
+        void endBumpCreation();
 #pragma mark - RIB SCALING
         void startScalingSingleRib(CGLA::Vec3f touchPoint,
                                    bool secondPointOnTheModel,
                                    float scale,
-                                   float velocity,
                                    float touchSize,
                                    bool anisotropic);
         void changeScalingSingleRib(float scale);
@@ -110,14 +113,24 @@ namespace PAMMesh
         Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree;
         HMesh::HalfEdgeAttributeVector<EdgeInfo> edgeInfo;
         
+        //RIBS SCALING VARS
+        float _scaleFactor;
         std::vector<HMesh::HalfEdgeID> _edges_to_scale;
         std::vector<HMesh::VertexID> _sculpt_verticies_to_scale;
-        HMesh::VertexAttributeVector<CGLA::Vec3f> _current_scale_position;
         std::vector<CGLA::Vec3f> _centroids;
         std::vector<float> _scale_weight_vector;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _current_scale_position;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _anisotropic_projections;
         
-        float _scaleFactor;
+        //BUMP CREATION VARS
+        float _bumpBrushDepth;
+        CGLA::Vec3d _bumpDirection;
+        std::set<HMesh::VertexID> _bump_verticies;
+        HMesh::VertexAttributeVector<int> _bump_current_displacement_vid_is_set;
+        HMesh::VertexAttributeVector<float> _bump_verticies_weigths;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_displacement;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_norms;
+        
         
         void bufferVertexDataToGPU();
         

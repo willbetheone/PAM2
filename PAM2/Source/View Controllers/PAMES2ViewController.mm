@@ -396,41 +396,44 @@ using namespace RAEngine;
             float depth1 = [self depthForPoint:touchPoint1 depthBuffer:pixelData];
             float depth2 = [self depthForPoint:touchPoint2 depthBuffer:pixelData];
             
-            UIGestureRecognizer* g = (UIGestureRecognizer*)sender;
-            float touchSize = 2 * [self touchSizeForGesture:g];
+            float touchSize = [self touchSizeForGesture:sender];
             
             if (depth1 < 0 || depth2 < 0)
             {
+//                Vec3f rayOrigin1, rayOrigin2;
+//                if (![self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1] ||
+//                    ![self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2])
+//                {
+//                    RA_LOG_WARN("Couldn't determine touch area");
+//                    return;
+//                }
+                bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
+                
                 //on of the fingers touched background. Start scaling.
                 if (depth1 < 0 && depth2 < 0)
                 {
-                    Vec3f rayOrigin;
-                    if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint1]) {
-                        RA_LOG_WARN("Couldn't determine touch area");
+                    Vec3f model;
+                    Vec2f middlePoint = 0.5f * (Vec2f(touchPoint1.x, touchPoint1.y) +
+                                                Vec2f(touchPoint2.x, touchPoint2.y));
+                    float depth = [self depthForPoint:CGPointMake(floorf(middlePoint[0]), floorf(middlePoint[1]))
+                                          depthBuffer:pixelData];
+                    if (depth < 0) {
                         return;
                     }
-                    bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
-                    pamManifold->startScalingSingleRib(rayOrigin,false, sender.scale, sender.velocity, touchSize, anisotropic);
+                    [self modelCoordinates:model forTouchPoint:Vec3f(middlePoint, depth)];
+                    pamManifold->startScalingSingleRib(model, false, sender.scale, touchSize, anisotropic);
                 }
                 else if (depth1 < 0)
                 {
-                    Vec3f rayOrigin;
-                    if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint1]) {
-                        RA_LOG_WARN("Couldn't determine touch area");
-                        return;
-                    }
-                    bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
-                    pamManifold->startScalingSingleRib(rayOrigin, true, sender.scale, sender.velocity, touchSize,anisotropic);
+                    Vec3f model;
+                    [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint2.x, touchPoint2.y, depth2)];
+                    pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
                 }
                 else
                 {
-                    Vec3f rayOrigin;
-                    if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint2]) {
-                        RA_LOG_WARN("Couldn't determine touch area");
-                        return;
-                    }
-                    bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
-                    pamManifold->startScalingSingleRib(rayOrigin,true,sender.scale,sender.velocity,touchSize, anisotropic);
+                    Vec3f model;
+                    [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint1.x, touchPoint1.y, depth1)];
+                    pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
                 }
             }
             else if (depth1 >= 0 && depth2 >= 0)
@@ -449,19 +452,18 @@ using namespace RAEngine;
                 Vec3f modelCoord;
                 [self modelCoordinates:modelCoord forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)];
                 float brushSize = distanceBetweenFingers/2;
-    //            [_pMesh startBumpCreationAtPoint:modelCoord
-    //                                   brushSize:brushSize
-    //                                  brushDepth:pinch.scale];
+                pamManifold->startBumpCreation(modelCoord, brushSize, sender.scale);
             }
+            delete [] pixelData;
         } else if (sender.state == UIGestureRecognizerStateChanged) {
             if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
-    //            [_pMesh continueBumpCreationWithBrushDepth:pinch.scale];
+                pamManifold->continueBumpCreation(sender.scale);
             } else {
                 pamManifold->changeScalingSingleRib(sender.scale);
             }
         } else if (sender.state == UIGestureRecognizerStateEnded) {
             if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
-    //            [_pMesh endBumpCreation];
+                pamManifold->endBumpCreation();
             } else {
                 pamManifold->endScalingSingleRib(sender.scale);
             }
@@ -658,7 +660,7 @@ using namespace RAEngine;
     CGPoint touchPoint = [self touchPointFromGesture:sender];
     GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
     BOOL result  = [self modelCoordinates:modelCoord forTouchPoint:touchPoint depthBuffer:pixelData];
-    delete pixelData;
+    delete [] pixelData;
     return result;
 }
 
