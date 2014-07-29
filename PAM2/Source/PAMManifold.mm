@@ -1296,6 +1296,12 @@ namespace PAMMesh
             closestVertexID_2D(firstPoint, touchedVID);
         }
         
+        VertexID poleID;
+        if (touchedNearPole(touchedVID,poleID)) {
+            extendBranchAtPole(poleID, touchPoints);
+            return;
+        }
+        
         if (touchPoints.size() < 6) {
             RA_LOG_WARN("Not enough points");
             return;
@@ -1493,6 +1499,175 @@ namespace PAMMesh
         buildKDTree();
         bufferVertexDataToGPU();
         traceEdgeInfo();
+    }
+    
+    void PAMManifold::extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints)
+    {
+        assert(is_pole(*this, poleID));
+        
+        Vec3f polePos = posf(poleID);
+        Walker fromPoleWalker = walker(poleID);
+        HalfEdgeID upperRibID = fromPoleWalker.next().halfedge();
+        HalfEdgeID lowerRibID = fromPoleWalker.next().opp().halfedge();
+        Vec3f nextRibCenter = centroid_for_rib(*this, lowerRibID, edgeInfo);
+        
+        int poleValency = valency(*this, poleID);
+        float ribWidth = rib_radius(*this, lowerRibID, edgeInfo);
+        
+        //    Vec ribRadiusVec = _manifold.pos(fromPoleWalker.vertex()) - nextRibCenter;
+        //    normalize(ribRadiusVec);
+        
+        Vec3f poleNorm = polePos - nextRibCenter;
+        poleNorm.normalize();
+        
+        if (touchPoints.size() < 6 ) {
+            RA_LOG_WARN("Garbage point data");
+            return;
+        }
+        
+        //convert touch points to world space
+        for_each(touchPoints.begin(), touchPoints.end(), [&](Vec3f &v){ v = viewMatrix.mul_3D_point(v);});
+        
+        //Get skeleton aka joint points
+        vector<Vec3f> rawSkeleton;
+        float c_step = length(viewMatrix.mul_3D_vector(Vec3f(3*kCENTROID_STEP,0,0)));
+        reduceLineToEqualSegments3D(rawSkeleton, touchPoints, c_step);
+        if (rawSkeleton.size() < 4) {
+            RA_LOG_WARN("Not enough controids");
+            return;
+        }
+        
+//        [self saveState];
+        
+        //add depth
+        Mat4x4f mvMatrix = getModelViewMatrix();
+        Vec3f touchedV_world = mvMatrix.mul_3D_point(polePos);
+        float zValueTouched = touchedV_world[2];
+        for_each(rawSkeleton.begin(), rawSkeleton.end(), [&](Vec3f &v){v = Vec3f(v[0], v[1], zValueTouched);});
+        
+        //Smooth
+        vector<Vec3f> skeleton;
+        laplacianSmoothing(rawSkeleton, skeleton, 3, 0.5);
+        
+        //Skeleton should start at the centroid of the rib loop next to pole
+        Vec3f translate = touchedV_world - skeleton[0];
+        for_each(skeleton.begin(), skeleton.end(), [&](Vec3f &v){v += translate;});
+        
+        //Length
+        float totalLength = 0;
+        Vec3f lastSkelet = skeleton[0];
+        for (int i = 1; i < skeleton.size(); i++) {
+            totalLength += length(skeleton[i-1] - skeleton[i]);
+        }
+        
+        float deformLength = 0.1f * totalLength;
+        int deformIndex = 0;
+        totalLength = 0;
+        for (int i = 1; i < skeleton.size(); i++) {
+            totalLength += length(skeleton[i-1] - skeleton[i]);
+            if (totalLength > deformLength) {
+                deformIndex = i + 1;
+                break;
+            }
+        }
+        
+        //Move branch by weighted norm
+        Vec3f holeNormWorld = normalize(mvMatrix.mul_3D_vector(poleNorm));
+        holeNormWorld = deformLength * holeNormWorld;
+        for (int i = 0; i < skeleton.size(); i++) {
+            if (i < deformIndex) {
+                float x = (float)i/(float)deformIndex;
+                float weight = sqrt(x);
+                skeleton[i] = skeleton[i] + weight*holeNormWorld;
+            } else {
+                skeleton[i] = skeleton[i] + holeNormWorld;
+            }
+        }
+        
+        //Get norm vectors for skeleton joints
+        vector<Vec3f> skeletonTangents;
+        vector<Vec3f> skeletonNormals;
+        normals3D(skeletonNormals, skeletonTangents,skeleton);
+        
+        //Parse new skeleton and create ribs
+        //Ingore first and last centroids since they are poles
+        int numSpines = poleValency;
+        vector<vector<Vec3f>> allRibs(skeleton.size());
+        Mat4x4f invertModelViewMatrix = invert_affine(mvMatrix);
+        
+        for (int i = 0; i < skeleton.size(); i++) {
+            Vec3f sModel = invertModelViewMatrix.mul_3D_point(skeleton[i]);
+            Vec3f nModel = invertModelViewMatrix.mul_3D_vector(skeletonNormals[i]);
+            Vec3f tModel = invertModelViewMatrix.mul_3D_vector(skeletonTangents[i]);
+            tModel = ribWidth*normalize(tModel);
+            nModel = ribWidth*normalize(nModel);
+            
+            if (i == skeleton.size() - 1) {
+                vector<Vec3f> secondPole;
+                secondPole.push_back(sModel);
+                allRibs[i] = secondPole;
+            } else {
+                vector<Vec3f> ribs(numSpines);
+                float rot_step = 360.0f/numSpines;
+                Mat4x4f toOrigin = translation_Mat4x4f(-1*sModel);
+                Mat4x4f fromOrigin = translation_Mat4x4f(sModel);
+
+                for (int j = 0; j < numSpines; j++) {
+                    float angle = j * rot_step;
+                    
+                    Mat4x4f rotMatrix = rotation_Mat4x4f(tModel, -1*angle*DEGREES_TO_RADIANS);
+                    Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+                    
+                    Vec3f startPosition = sModel + nModel;
+                    startPosition =  tMatrix.mul_3D_point(startPosition);
+                    ribs[j] = startPosition;
+                }
+                allRibs[i] = ribs;
+            }
+        }
+
+        //Delete pole
+        remove_vertex(poleID);
+        
+        vector<Vec3f> newLimbVerticies;
+        vector<int>  newLimbFaces;
+        vector<int> newLimbIndices;
+        populateNewLimb(allRibs,newLimbVerticies,newLimbFaces,newLimbIndices);
+        
+        assert(newLimbVerticies.size() != 0);
+        assert(newLimbFaces.size() != 0);
+        assert(newLimbIndices.size() != 0);
+        
+        FaceIDIterator lastFace = faces_end();
+        build(newLimbVerticies.size(),
+              reinterpret_cast<float*>(&newLimbVerticies[0]),
+              newLimbFaces.size(),
+              &newLimbFaces[0],
+              &newLimbIndices[0]);
+        
+        lastFace++;
+        Walker lastFaceWalker = walker(*lastFace);
+        
+        vector<HalfEdgeID> newEdges;
+        vector<VertexID> newVerticies;
+        allVerticiesAndHalfEdges(newVerticies,newEdges,lastFaceWalker.vertex());
+        
+        HalfEdgeID newBranchLowerRibEdge;
+        if (!boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges)) {
+//            [self undo];
+            return;
+        }
+        
+        stitchBranchToBody(upperRibID,newBranchLowerRibEdge);
+        
+        traceEdgeInfo();
+//        [self rebufferWithCleanup:NO bufferData:NO edgeTrace:YES];
+        smoothAlongRib(lowerRibID,2,true,ribWidth);
+        
+        bufferVertexDataToGPU();
+        buildKDTree();
+//        
+//        [self rebufferWithCleanup:YES bufferData:YES edgeTrace:YES];
     }
     
     int PAMManifold::branchWidthForAngle(float angle, HMesh::VertexID vID)
@@ -1809,7 +1984,29 @@ namespace PAMMesh
             assert(didStich);
         }
     }
-
+    
+    bool PAMManifold::touchedNearPole(HMesh::VertexID touchID, HMesh::VertexID& poleID)
+    {
+        if (is_pole(*this, touchID)) {
+            poleID = touchID;
+            return YES;
+        }
+        
+        bool foundPole = false;
+        circulate_vertex_ccw(*this, touchID, [&](Walker w) {
+            if (is_pole(*this, w.vertex())) {
+                foundPole = true;
+                poleID = w.vertex();
+            }
+        });
+        
+        if (foundPole) {
+            return true;
+        }
+        
+        return false;
+    }
+ 
 #pragma mark - BUMP CREATION
     void PAMManifold::startBumpCreation(CGLA::Vec3f touchPoint,
                                         float brushSize,
@@ -3177,8 +3374,268 @@ namespace PAMMesh
             pos(vid) = p;
         }
     }
+
+#pragma mark - CLONING
+    bool PAMManifold::copyBranchToBuffer(CGLA::Vec3f touchPoint)
+    {
+        if (modState != Modification::PIN_POINT_SET) {
+            RA_LOG_WARN("Cant copy. Pin point is not chosen");
+            return false;
+        }
+        
+        number_rib_edges(*this, edgeInfo);
+        if (edgeInfo[_pinHalfEdgeID].edge_type == RIB_JUNCTION) {
+            RA_LOG_ERROR("Can't clone at a branch junction");
+//            [self.delegate displayHint:@"Can't clone at a branch junction"];
+            return false;
+        }
+        
+        //Decide which side to delete
+        Walker up = walker(_pinVertexID);
+        if (!edgeInfo[up.halfedge()].is_spine()) {
+            up = up.prev().opp();
+        }
+        assert(edgeInfo[up.halfedge()].is_spine());
+        Walker down = up.prev().opp().prev().opp();
+        assert(edgeInfo[down.halfedge()].is_spine());
+        assert(up.opp().vertex() == down.opp().vertex());
+        
+        
+        Vec3f upCentr = centroid_for_rib(*this, up.next().halfedge(), edgeInfo);
+        Vec3f downCentr = centroid_for_rib(*this, down.next().halfedge(), edgeInfo);
+        Vec3f pinCentr = centroid_for_rib(*this, _pinHalfEdgeID);
+        
+        Vec3f upVec = upCentr - pinCentr;
+        Vec3f downVec = downCentr - pinCentr;
+        
+        Mat4x4f mvMatrix = getModelViewMatrix();
+
+        Vec3f pinCentroidWorld = mvMatrix.mul_3D_point(pinCentr);
+        Vec3f touchPointWorld = viewMatrix.mul_3D_point(touchPoint);
+        
+        touchPointWorld[2] = pinCentroidWorld[2];
+        Vec3f touchPointModel = invert_affine(mvMatrix).mul_3D_point(touchPointWorld);
+        Vec3f touchDir = touchPointModel - pinCentr;
+        
+        Walker toWalker = up;
+        if (dot(touchDir, upVec) >= 0) {
+            toWalker = up;
+        } else if (dot(touchDir, downVec) >= 0) {
+            toWalker = down;
+        } else {
+            RA_LOG_ERROR("Couldn't decide witch side to detach");
+//            [self.delegate displayHint:@"Couldn't decide witch side to detach"];
+            return NO;
+        }
+        
+        _cloningDirection = toWalker.halfedge();
+        _cloningBodyUpperRibEdge = toWalker.prev().halfedge();
+        
+        //Number of rib segments araound boundary rib
+        _copyNumBoundaryRibSegments = 0;
+        for (Walker boundaryW = walker(_cloningBodyUpperRibEdge);
+             !boundaryW.full_circle();
+             boundaryW = boundaryW.next().opp().next())
+        {
+            _copyNumBoundaryRibSegments++;
+        }
+        
+        //find all verticies that we need to delete
+        _original_verticies_copied =  allVerticiesInDirection(toWalker);
+        set<VertexID> all_verticies_to_delete =  allVerticiesInDirection(toWalker.opp());
+        //        [self changeVerticiesColor:all_verticies_to_delete toSelected:YES];
+        
+        //remove verticies from duplicate manifold, so that only copy part is left
+        Manifold copyMani = Manifold(*this);
+        for (VertexID vID: all_verticies_to_delete) {
+            copyMani.remove_vertex(vID);
+        }
+        copyMani.cleanup();
+        
+        _copyFaces.clear();
+        _copyIndices.clear();
+        _copyVerticies.clear();
+        extractFromManifold(copyMani,_copyVerticies,_copyFaces,_copyIndices);
+        
+        changeVerticiesColor_Set(_original_verticies_copied,Vec4uc(250, 89, 14, 255));
+        
+        //    _pinPointLine = nil;
+        modState = Modification::BRANCH_COPIED_BRANCH_FOR_CLONING;
+        
+        return true;
+    }
     
-#pragma mark - SCALE DETACHED BRANCH
+    bool PAMManifold::cloneBranchTo(CGLA::Vec3f touchPoint)
+    {
+        if (modState != Modification::BRANCH_COPIED_BRANCH_FOR_CLONING) {
+            RA_LOG_WARN("No branch was chosen for cloning");
+            return false;
+        }
+
+        closestVertexID_3D(touchPoint, _newClonedVertexID);
+        Vec touchPos = pos(_newClonedVertexID);
+        Vec normal = HMesh::normal(*this, _newClonedVertexID);
+        
+        //check if you can possible move here
+        int numRibSegments = count_rib_segments(*this, edgeInfo, _newClonedVertexID);
+        if (numRibSegments - 2 < _copyNumBoundaryRibSegments) {
+            return NO;
+        }
+        
+//        [self saveState];
+        
+        assert(_copyVerticies.size() != 0);
+        assert(_copyFaces.size() != 0);
+        assert(_copyIndices.size() != 0);
+        
+        FaceIDIterator lastFace = faces_end();
+        build(_copyVerticies.size(),
+              reinterpret_cast<float*>(&_copyVerticies[0]),
+              _copyFaces.size(),
+              &_copyFaces[0],
+              &_copyIndices[0]);
+        
+        lastFace++;
+        Walker w = walker(*lastFace);
+        
+        vector<HalfEdgeID>newEdges;
+        _cloned_verticies.clear();
+        allVerticiesAndHalfEdges(_cloned_verticies,newEdges,w.vertex());
+        
+        Vec boundaryCentroid = Vec(centroid_for_rib(*this, _cloningBodyUpperRibEdge, edgeInfo));
+        Vec toTouchPos = touchPos - boundaryCentroid;
+        for (VertexID vid: _cloned_verticies) {
+            pos(vid) += toTouchPos;
+        }
+        
+        if (!boundaryHalfEdgeForClonedMesh(_cloningBranchLowerRibEdge,newEdges)) {
+//            [self undo];
+            return false;
+        }
+        
+        vector<VertexID> verticies;
+        for(HalfEdgeID hid: newEdges)
+        {
+            Walker w = walker(hid);
+            verticies.push_back(w.vertex());
+        }
+        
+        //    [self rebufferWithCleanup:NO bufferData:YES edgeTrace:NO];
+        //    [self changeWireFrameColor:_cloned_verticies toSelected:YES];
+        //    return NO;
+        
+        Walker toSecondRing = walker(_cloningBranchLowerRibEdge);
+        toSecondRing = toSecondRing.next().next().opp().next().next().opp();
+        _cloningSecondRing = toSecondRing.halfedge();
+        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _cloningSecondRing));
+        
+        Vec currentNorm = secondRingCentroid - touchPos;
+        
+        CGLA::Quatd q;
+        q.make_rot(normalize(currentNorm), normalize(normal));
+        
+        for (VertexID vid: _cloned_verticies) {
+            Vec p = pos(vid);
+            p -= touchPos;
+            p = q.apply(p);
+            p += touchPos;
+            pos(vid) = p;
+        }
+        
+        bufferVertexDataToGPU();
+//        [self rebufferWithCleanup:NO bufferData:YES edgeTrace:NO];
+        changeVerticiesColor_Vector(_cloned_verticies,Vec4uc(0,200,0,255));
+        changeVerticiesColor_Set(_original_verticies_copied,Vec4uc(250, 89, 14,255));
+        
+        modState = Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE;
+        
+        return true;
+    }
+    
+    bool PAMManifold::attachClonedBranch()
+    {
+        if (modState != Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE)
+        {
+            RA_LOG_WARN("Cant attach. Havent cloned");
+            return false;
+        }
+        
+        //Create new pole
+        VertexID newPoleID;
+        float bWidth;
+        Vec3f holeCenter, holeNorm;
+        HalfEdgeID boundaryHalfEdge;
+        BOOL result = createHoleAtVertex(_newClonedVertexID,
+                                         _copyNumBoundaryRibSegments/2,
+                                         newPoleID,
+                                         bWidth,
+                                         holeCenter,
+                                         holeNorm,
+                                         boundaryHalfEdge);
+        if (!result) {
+            return false;
+        }
+        
+        HalfEdgeID cloneBranchUpperOppRibEdge = walker(_cloningBranchLowerRibEdge).opp().halfedge();
+        stitchBranchToBody(_cloningBranchLowerRibEdge,boundaryHalfEdge);
+        
+        vector<VertexID> verteciesToSmooth;
+        for (Walker w = walker(cloneBranchUpperOppRibEdge); !w.full_circle(); w = w.next().opp().next()) {
+            verteciesToSmooth.push_back(w.vertex());
+        }
+        
+        if (!PAMMesh::PAMSettingsManager::getInstance().spineSmoothing) {
+            smoothVerticies(verteciesToSmooth,2,false,0.1);
+        } else {
+            traceEdgeInfo();
+            smoothVerticies(verteciesToSmooth,10,true,0.1);
+        }
+        
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
+        buildKDTree();
+
+        changeVerticiesColor_Set(_original_verticies_copied,Vec4uc(250, 89, 14, 255));
+        _cloned_verticies.clear();
+        modState = Modification::BRANCH_COPIED_BRANCH_FOR_CLONING;
+
+        return true;
+    }
+    
+    void PAMManifold::dismissCopiedBranch()
+    {
+        modState = Modification::NONE;
+//        _pinPointLine = nil;
+        changeVerticiesColor_Set(_original_verticies_copied,false);
+    }
+    
+    void PAMManifold::extractFromManifold(HMesh::Manifold& mani,
+                                          std::vector<CGLA::Vec3f>& verticies,
+                                          std::vector<int>& faces,
+                                          std::vector<int>&  indices)
+    {
+        for (VertexIDIterator vid = mani.vertices_begin(); vid != mani.vertices_end(); ++vid) {
+            assert((*vid).index < mani.no_vertices());
+            Vec3f position = mani.posf(*vid);
+            verticies.push_back(position);
+        }
+        
+        for (FaceIDIterator fid = mani.faces_begin(); fid != mani.faces_end(); ++fid) {
+            //iterate over every vertex of the face
+            int vertexNum = 0;
+            for(Walker w = mani.walker(*fid); !w.full_circle(); w = w.circulate_face_ccw()) {
+                //add vertex to the data array
+                VertexID vID = w.vertex();
+                unsigned int index = vID.index;
+                assert(index < mani.no_vertices());
+                vertexNum++;
+                indices.push_back(index);
+            }
+            faces.push_back(vertexNum);
+        }
+    }
+    
+#pragma mark - SCALE CLONED BRANCH
     bool PAMManifold::startScaleClonedBranch(float scale)
     {
         if (modState != Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE)
@@ -3215,6 +3672,51 @@ namespace PAMMesh
         
         for (VertexID vid: _cloned_verticies) {
             pos(vid) = tMatrix.mul_3D_point(pos(vid));
+        }
+        modState = Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE;
+    }
+
+#pragma mark - ROTATE CLONED BRANCH
+    bool PAMManifold::startRotateClonedBranch(float angle)
+    {
+        if (modState != Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE)
+        {
+            RA_LOG_WARN("Cant rotate non cloned branch");
+            return false;
+        }
+        
+        _rotAngle = angle;
+        
+        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _cloningSecondRing));
+        Vec touchPos = pos(_newClonedVertexID);
+        _zRotatePos = touchPos;
+        _zRotateVec = secondRingCentroid - touchPos;;
+        _prevMod = modState;
+        _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+        
+        modState = Modification::BRANCH_CLONE_ROTATION;
+        return true;
+    }
+    
+    void PAMManifold::continueRotateClonedBranch(float angle)
+    {
+        _rotAngle = angle;
+    }
+    
+    void PAMManifold::endRotateClonedBranch(float angle)
+    {
+        _rotAngle = angle;
+        modState = _prevMod;
+        
+        CGLA::Quatd q;
+        q.make_rot(-_rotAngle, _zRotateVec);
+        
+        for (VertexID vid: _cloned_verticies) {
+            Vec p = pos(vid);
+            p -= _zRotatePos;
+            p = q.apply(p);
+            p += _zRotatePos;
+            pos(vid) = p;
         }
         modState = Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE;
     }

@@ -151,11 +151,22 @@ namespace PAMMesh
         void continueRotateDetachedBranch(float angle);
         void endRotateDetachedBranch(float angle);
 
-#pragma mark - SCALE DETACHED BRANCH
+#pragma mark - CLONING
+        bool copyBranchToBuffer(CGLA::Vec3f touchPoint);
+        bool cloneBranchTo(CGLA::Vec3f touchPoint);
+        bool attachClonedBranch();
+        void dismissCopiedBranch();
+
+#pragma mark - SCALE CLONED BRANCH
         bool startScaleClonedBranch(float scale);
         void continueScaleClonedBranch(float scale);
         void endScaleClonedBranch(float scale);
-
+        
+#pragma mark - ROTATE CLONED BRANCH
+        bool startRotateClonedBranch(float angle);
+        void continueRotateClonedBranch(float angle);
+        void endRotateClonedBranch(float angle);
+        
     private:
         
         std::map<HMesh::VertexID, int> vertexIDtoIndex;
@@ -270,6 +281,10 @@ namespace PAMMesh
         
         int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
 
+        bool touchedNearPole(HMesh::VertexID touchID, HMesh::VertexID& poleID);
+        
+        void extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints);
+
 #pragma mark - PIVOT POINT UTILITIES
         bool toPivotFromPinDirection(HMesh::HalfEdgeID& toPivothID);
         bool setTransformedArea();
@@ -289,7 +304,12 @@ namespace PAMMesh
         
 #pragma mark - POSING UTILITIES
         HMesh::Walker biggerSide(HMesh::HalfEdgeID ribLoop, std::set<HMesh::VertexID>& returnSet);
-
+#pragma mark - CLONING UTILITES
+        void extractFromManifold(HMesh::Manifold& mani,
+                                 std::vector<CGLA::Vec3f>& verticies,
+                                 std::vector<int>& faces,
+                                 std::vector<int>&  indices);
+        
 #pragma mark - SMOOTHING
         void neighbours(std::set<HMesh::VertexID>& neighbours, std::vector<HMesh::VertexID>& verticies, float brush_size);
         

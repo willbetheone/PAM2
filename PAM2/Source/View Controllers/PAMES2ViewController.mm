@@ -237,6 +237,20 @@ using namespace RAEngine;
     doubleTap.numberOfTapsRequired = 2;
     [view addGestureRecognizer:doubleTap];
 
+    //Three finger pan
+    UIPanGestureRecognizer* threeFingerTranslation = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handleThreeFingerPanGesture:)];
+    threeFingerTranslation.minimumNumberOfTouches = 3;
+    [view addGestureRecognizer:threeFingerTranslation];
+    
+    //Single tap
+    UITapGestureRecognizer* singleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleSingleTapGesture:)];
+    singleTap.numberOfTouchesRequired = 1;
+    singleTap.numberOfTapsRequired = 1;
+    [singleTap requireGestureRecognizerToFail:doubleTap];
+    [view addGestureRecognizer:singleTap];
+
+
+
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -256,18 +270,6 @@ using namespace RAEngine;
             break;
     }
     return state;
-}
-
--(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender {
-    Vec3f modelCoord;
-    if (![self modelCoordinates:modelCoord forGesture:sender]) {
-        RA_LOG_WARN("Touched background");
-        return;
-    }
-    int iter = PAMSettingsManager::getInstance().tapSmoothing;
-//    float wrong_radius = 3*[self touchSize];
-    float radius = 3*[self touchSizeForFingerSize:8.0f];
-    pamManifold->smoothAtPoint(modelCoord,radius,iter);
 }
 
 -(void)handleLongPressGesture:(UIGestureRecognizer*)sender
@@ -299,7 +301,26 @@ using namespace RAEngine;
     }
 }
 
-
+-(void)handleSingleTapGesture:(UIGestureRecognizer*)sender
+{
+    if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED ||
+        pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_AN_MOVED)
+    {
+        Vec3f modelCoord;
+        if (![self modelCoordinates:modelCoord forGesture:sender]) {
+            RA_LOG_WARN("Touched background");
+            return;
+        }
+        pamManifold->moveDetachedBranch(modelCoord);
+    } else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_BRANCH_FOR_CLONING) {
+        Vec3f modelCoord;
+        if (![self modelCoordinates:modelCoord forGesture:sender]) {
+            RA_LOG_WARN("Touched background");
+            return;
+        }
+        pamManifold->cloneBranchTo(modelCoord);
+    }
+}
 
 -(void)handleTwoFingeTapGesture:(UIGestureRecognizer*)sender
 {
@@ -313,6 +334,18 @@ using namespace RAEngine;
     } else {
         _transformModeLabel.text = @"Model";
     }
+}
+
+-(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender {
+    Vec3f modelCoord;
+    if (![self modelCoordinates:modelCoord forGesture:sender]) {
+        RA_LOG_WARN("Touched background");
+        return;
+    }
+    int iter = PAMSettingsManager::getInstance().tapSmoothing;
+    //    float wrong_radius = 3*[self touchSize];
+    float radius = 3*[self touchSizeForFingerSize:8.0f];
+    pamManifold->smoothAtPoint(modelCoord,radius,iter);
 }
 
 -(void)handleOneFingerPanGesture:(UIPanGestureRecognizer*)sender
@@ -562,6 +595,24 @@ using namespace RAEngine;
     }
 }
 
+-(void)handleThreeFingerPanGesture:(UIPanGestureRecognizer*)sender {
+    if (sender.state == UIGestureRecognizerStateEnded) {
+        if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET) {
+            Vec3f rayOrigin;
+            if (![self rayOrigin:rayOrigin forGesture:sender]) {
+                RA_LOG_WARN("Couldn't determine touch area");
+                return;
+            }
+            pamManifold->copyBranchToBuffer(rayOrigin);
+        } else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE) {
+            pamManifold->attachClonedBranch();
+        } else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_BRANCH_FOR_CLONING) {
+            pamManifold->dismissCopiedBranch();
+            polyline1->enabled = false;
+        }
+    }
+}
+
 -(void)handleRotationGesture:(UIRotationGestureRecognizer*)sender
 {
     if (![self modelIsLoaded]) {
@@ -607,11 +658,11 @@ using namespace RAEngine;
                  pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_ROTATION)
         {
             if (sender.state == UIGestureRecognizerStateBegan) {
-//                [_pMesh startRotateClonedBranch:rotGesture.rotation];
+                pamManifold->startRotateClonedBranch(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateChanged) {
-//                [_pMesh continueRotateClonedBranch:rotGesture.rotation];
+                pamManifold->continueRotateClonedBranch(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
-//                [_pMesh endRotateClonedBranch:rotGesture.rotation];
+                pamManifold->endRotateClonedBranch(sender.rotation);
             }
         }
         else if (pamManifold->modState == PAMManifold::Modification::NONE ||
