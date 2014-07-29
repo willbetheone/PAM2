@@ -159,6 +159,11 @@ using namespace RAEngine;
     twoFingerTranslation.minimumNumberOfTouches = 2;
     twoFingerTranslation.maximumNumberOfTouches = 2;
     [view addGestureRecognizer:twoFingerTranslation];
+    
+    //Long Press
+    UILongPressGestureRecognizer* longPress = [[ UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGesture:)];
+    longPress.numberOfTouchesRequired = 1;
+    [view addGestureRecognizer:longPress];
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -179,6 +184,37 @@ using namespace RAEngine;
     }
     return state;
 }
+
+-(void)handleLongPressGesture:(UIGestureRecognizer*)sender
+{
+    if (![self modelIsLoaded]) {
+        return;
+    }
+    
+    if (PAMSettingsManager::getInstance().transform) {
+        return;
+    }
+    
+    if (sender.state == UIGestureRecognizerStateBegan)
+    {
+        if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET) {
+            pamManifold->deleteCurrentPinPoint();
+            polyline1->enabled = false;
+        } else if (pamManifold->modState == PAMManifold::Modification::NONE) {
+            Vec3f modelCoord;
+            if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                RA_LOG_WARN("Touched background");
+                return;
+            }
+            polyline1Data.clear();
+            pamManifold->createPinPoint(modelCoord, polyline1Data);
+            polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+            polyline1->enabled = true;
+        }
+    }
+}
+
+
 
 -(void)handleTwoFingeTapGesture:(UIGestureRecognizer*)sender
 {
@@ -373,8 +409,70 @@ using namespace RAEngine;
         return;
     }
     
-    GestureState state = [self gestureStateForRecognizer:sender];
-    rotManager->handleRotationGesture(state, [sender rotation], viewVolumeCenter);
+    if (PAMSettingsManager::getInstance().transform)
+    {
+        GestureState state = [self gestureStateForRecognizer:sender];
+        rotManager->handleRotationGesture(state, [sender rotation], viewVolumeCenter);
+    }
+    else
+    {
+        if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_ROTATION)
+        {
+            if (sender.state == UIGestureRecognizerStateBegan) {
+                Vec3f modelCoord;
+                if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                    RA_LOG_WARN("Touched background");
+                    return;
+                }
+                pamManifold->startBending(modelCoord, sender.rotation);
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+                pamManifold->continueBending(sender.rotation);
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+                pamManifold->endBendingWithAngle(sender.rotation);
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED ||
+                 pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_AN_MOVED ||
+                 pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_ROTATE)
+        {
+            if (sender.state == UIGestureRecognizerStateBegan) {
+//                [_pMesh startRotateDetachedBranch:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                [_pMesh continueRotateDetachedBranch:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                [_pMesh endRotateDetachedBranch:rotGesture.rotation];
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE ||
+                 pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_ROTATION)
+        {
+            if (sender.state == UIGestureRecognizerStateBegan) {
+//                [_pMesh startRotateClonedBranch:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                [_pMesh continueRotateClonedBranch:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                [_pMesh endRotateClonedBranch:rotGesture.rotation];
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::NONE ||
+                 pamManifold->modState == PAMManifold::Modification::BRANCH_POSE_ROTATE)
+        {
+            if (sender.state == UIGestureRecognizerStateBegan) {
+                Vec3f modelCoord;
+                if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                    RA_LOG_WARN("Touched background");
+                    return;
+                }
+//                [_pMesh statePosingRotateWithTouchPoint:modelCoord angle:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                [_pMesh continuePosingRotate:rotGesture.rotation];
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                [_pMesh endPosingRotate:rotGesture.rotation];
+            }
+        }
+
+    }
 }
 
 -(void)handlePinchGesture:(UIPinchGestureRecognizer*)sender
@@ -388,87 +486,121 @@ using namespace RAEngine;
         GestureState state = [self gestureStateForRecognizer:sender];
         zoomManager->handlePinchGesture(state, sender.scale);
     } else {
-        if (sender.state == UIGestureRecognizerStateBegan)
+        
+        if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_SCALING)
         {
-            CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
-                                                 inView:(GLKView*)sender.view];
-            
-            GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
-            float depth1 = [self depthForPoint:touchPoint1 depthBuffer:pixelData];
-            float depth2 = [self depthForPoint:touchPoint2 depthBuffer:pixelData];
-            
-            float touchSize = [self touchSizeForGesture:sender];
-            
-            if (depth1 < 0 || depth2 < 0)
-            {
-//                Vec3f rayOrigin1, rayOrigin2;
-//                if (![self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1] ||
-//                    ![self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2])
-//                {
-//                    RA_LOG_WARN("Couldn't determine touch area");
-//                    return;
-//                }
-                bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
-                
-                //on of the fingers touched background. Start scaling.
-                if (depth1 < 0 && depth2 < 0)
-                {
-                    Vec3f model;
-                    Vec2f middlePoint = 0.5f * (Vec2f(touchPoint1.x, touchPoint1.y) +
-                                                Vec2f(touchPoint2.x, touchPoint2.y));
-                    float depth = [self depthForPoint:CGPointMake(floorf(middlePoint[0]), floorf(middlePoint[1]))
-                                          depthBuffer:pixelData];
-                    if (depth < 0) {
-                        return;
-                    }
-                    [self modelCoordinates:model forTouchPoint:Vec3f(middlePoint, depth)];
-                    pamManifold->startScalingSingleRib(model, false, sender.scale, touchSize, anisotropic);
-                }
-                else if (depth1 < 0)
-                {
-                    Vec3f model;
-                    [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint2.x, touchPoint2.y, depth2)];
-                    pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
-                }
-                else
-                {
-                    Vec3f model;
-                    [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint1.x, touchPoint1.y, depth1)];
-                    pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
-                }
-            }
-            else if (depth1 >= 0 && depth2 >= 0)
-            {
-                //touched the model so start bump creation
-                Vec3f modelCoord1, modelCoord2;
-                Vec3f worldTouchPoint1 = Vec3f(touchPoint1.x, touchPoint1.y, depth1);
-                Vec3f worldTouchPoint2 = Vec3f(touchPoint2.x, touchPoint2.y, depth2);
-                [self modelCoordinates:modelCoord1 forTouchPoint:worldTouchPoint1];
-                [self modelCoordinates:modelCoord2 forTouchPoint:worldTouchPoint2];
-                float distanceBetweenFingers = (modelCoord2 - modelCoord1).length();
-                
-                CGPoint touchPoint = CGPointMake(floorf(0.5*(touchPoint1.x +touchPoint2.x)),
-                                                 floorf(0.5*(touchPoint1.y +touchPoint2.y)));
-                float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
+            if (sender.state == UIGestureRecognizerStateBegan) {
                 Vec3f modelCoord;
-                [self modelCoordinates:modelCoord forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)];
-                float brushSize = distanceBetweenFingers/2;
-                pamManifold->startBumpCreation(modelCoord, brushSize, sender.scale);
+                if (![self modelCoordinates:modelCoord forGesture:sender]) {
+                    RA_LOG_WARN("Touched background");
+                    return;
+                }
+//                [_pMesh startScalingBranchTreeWithTouchPoint:modelCoord scale:pinch.scale];
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                [_pMesh continueScalingBranchTreeWithScale:pinch.scale];
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                [_pMesh endScalingBranchTreeWithScale:pinch.scale];
             }
-            delete [] pixelData;
-        } else if (sender.state == UIGestureRecognizerStateChanged) {
-            if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
-                pamManifold->continueBumpCreation(sender.scale);
-            } else {
-                pamManifold->changeScalingSingleRib(sender.scale);
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE ||
+                 pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_SCALING )
+        {
+            if (sender.state == UIGestureRecognizerStateBegan) {
+//                [_pMesh startScaleClonedBranch:pinch.scale];
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+//                [_pMesh continueScaleClonedBranch:pinch.scale];
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+//                [_pMesh endScaleClonedBranch:pinch.scale];
             }
-        } else if (sender.state == UIGestureRecognizerStateEnded) {
-            if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
-                pamManifold->endBumpCreation();
-            } else {
-                pamManifold->endScalingSingleRib(sender.scale);
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::NONE ||
+                 pamManifold->modState == PAMManifold::Modification::SCULPTING_SCALING ||
+                 pamManifold->modState == PAMManifold::Modification::SCULPTING_ANISOTROPIC_SCALING ||
+                 pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION)
+        {
+            if (sender.state == UIGestureRecognizerStateBegan)
+            {
+                CGPoint touchPoint1 = [self scaleTouchPoint:[sender locationOfTouch:0 inView:(GLKView*)sender.view]
+                                                     inView:(GLKView*)sender.view];
+                CGPoint touchPoint2 = [self scaleTouchPoint:[sender locationOfTouch:1 inView:(GLKView*)sender.view]
+                                                     inView:(GLKView*)sender.view];
+                
+                GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
+                float depth1 = [self depthForPoint:touchPoint1 depthBuffer:pixelData];
+                float depth2 = [self depthForPoint:touchPoint2 depthBuffer:pixelData];
+                
+                float touchSize = [self touchSizeForGesture:sender];
+                
+                if (depth1 < 0 || depth2 < 0)
+                {
+    //                Vec3f rayOrigin1, rayOrigin2;
+    //                if (![self rayOrigin:rayOrigin1 forTouchPoint:touchPoint1] ||
+    //                    ![self rayOrigin:rayOrigin2 forTouchPoint:touchPoint2])
+    //                {
+    //                    RA_LOG_WARN("Couldn't determine touch area");
+    //                    return;
+    //                }
+                    bool anisotropic = PAMSettingsManager::getInstance().sculptScalingType == PAMSettingsManager::ScultpScalingType::Silhouette;
+                    
+                    //on of the fingers touched background. Start scaling.
+                    if (depth1 < 0 && depth2 < 0)
+                    {
+                        Vec3f model;
+                        Vec2f middlePoint = 0.5f * (Vec2f(touchPoint1.x, touchPoint1.y) +
+                                                    Vec2f(touchPoint2.x, touchPoint2.y));
+                        float depth = [self depthForPoint:CGPointMake(floorf(middlePoint[0]), floorf(middlePoint[1]))
+                                              depthBuffer:pixelData];
+                        if (depth < 0) {
+                            return;
+                        }
+                        [self modelCoordinates:model forTouchPoint:Vec3f(middlePoint, depth)];
+                        pamManifold->startScalingSingleRib(model, false, sender.scale, touchSize, anisotropic);
+                    }
+                    else if (depth1 < 0)
+                    {
+                        Vec3f model;
+                        [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint2.x, touchPoint2.y, depth2)];
+                        pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
+                    }
+                    else
+                    {
+                        Vec3f model;
+                        [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint1.x, touchPoint1.y, depth1)];
+                        pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
+                    }
+                }
+                else if (depth1 >= 0 && depth2 >= 0)
+                {
+                    //touched the model so start bump creation
+                    Vec3f modelCoord1, modelCoord2;
+                    Vec3f worldTouchPoint1 = Vec3f(touchPoint1.x, touchPoint1.y, depth1);
+                    Vec3f worldTouchPoint2 = Vec3f(touchPoint2.x, touchPoint2.y, depth2);
+                    [self modelCoordinates:modelCoord1 forTouchPoint:worldTouchPoint1];
+                    [self modelCoordinates:modelCoord2 forTouchPoint:worldTouchPoint2];
+                    float distanceBetweenFingers = (modelCoord2 - modelCoord1).length();
+                    
+                    CGPoint touchPoint = CGPointMake(floorf(0.5*(touchPoint1.x +touchPoint2.x)),
+                                                     floorf(0.5*(touchPoint1.y +touchPoint2.y)));
+                    float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
+                    Vec3f modelCoord;
+                    [self modelCoordinates:modelCoord forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)];
+                    float brushSize = distanceBetweenFingers/2;
+                    pamManifold->startBumpCreation(modelCoord, brushSize, sender.scale);
+                }
+                delete [] pixelData;
+            } else if (sender.state == UIGestureRecognizerStateChanged) {
+                if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
+                    pamManifold->continueBumpCreation(sender.scale);
+                } else {
+                    pamManifold->changeScalingSingleRib(sender.scale);
+                }
+            } else if (sender.state == UIGestureRecognizerStateEnded) {
+                if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
+                    pamManifold->endBumpCreation();
+                } else {
+                    pamManifold->endScalingSingleRib(sender.scale);
+                }
             }
         }
     }

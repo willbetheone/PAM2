@@ -106,11 +106,40 @@ namespace PAMMesh
         void changeScalingSingleRib(float scale);
         void endScalingSingleRib(float scale);
 
+#pragma mark - PIN POINT METHODS
+        void createPinPoint(CGLA::Vec3f touchPoint, std::vector<CGLA::Vec3f>& pinPointRib);
+        void deleteCurrentPinPoint();
+
+#pragma mark - PIVOT POINT METHODS
+        bool createPivotPoint(CGLA::Vec3f touchPoint);
+
+#pragma mark - ROTATING THE BRANCH TREE
+        void startBending(CGLA::Vec3f touchPoint, float angle);
+        void continueBending(float angle);
+        void endBendingWithAngle(float angle);
+        
     private:
         
         std::map<HMesh::VertexID, int> vertexIDtoIndex;
         Geometry::KDTree<CGLA::Vec3f, HMesh::VertexID>* kdTree;
         HMesh::HalfEdgeAttributeVector<EdgeInfo> edgeInfo;
+        
+        //COMMON
+        HMesh::VertexID _pinVertexID;
+        HMesh::HalfEdgeID _pinHalfEdgeID;
+        HMesh::HalfEdgeID _pivotHalfEdgeID;
+        std::set<HMesh::VertexID> _transformed_verticies;
+        std::vector<HMesh::VertexID> _transition_verticies;
+        
+        //ROTATION
+        float _rotAngle;
+        HMesh::VertexAttributeVector<CGLA::Vec3f> _current_rot_position;
+        CGLA::Vec3f _centerOfRotation;
+        std::map<HMesh::VertexID, int> _vertexToLoop;
+        std::vector<int> _loopsToDeform;
+        std::map<int, float> _ringToDeformValue;
+        HMesh::HalfEdgeID _deformDirHalfEdge;
+        HMesh::HalfEdgeID _deformDirHalfEdgeEnd;
         
         //RIBS SCALING VARS
         float _scaleFactor;
@@ -166,11 +195,23 @@ namespace PAMMesh
         void stitchBranchToBody(HMesh::HalfEdgeID branchHID,HMesh::HalfEdgeID bodyHID);
         
         int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
+
+#pragma mark - ROTATING THE BRANCH TREE
+        void rotateRingsFrom(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
+        void rotateRingsFrom2(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
+        
+#pragma mark - PIVOT POINT METHODS
+        bool toPivotFromPinDirection(HMesh::HalfEdgeID& toPivothID);
+        bool setTransformedArea();
         
 #pragma mark - UTILITIES
         bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
         
         bool closestVertexID_2D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
+        
+        std::set<HMesh::VertexID> allVerticiesInDirectionHID(HMesh::HalfEdgeID hID);
+        
+        std::set<HMesh::VertexID> allVerticiesInDirection(HMesh::Walker deleteDir);
         
 #pragma mark - SMOOTHING
         void neighbours(std::set<HMesh::VertexID>& neighbours, std::vector<HMesh::VertexID>& verticies, float brush_size);
@@ -185,12 +226,17 @@ namespace PAMMesh
         
 #pragma mark -  UPDATE GPU DATA
         void updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
-        
         void updateVertexNormOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);
-        
         void updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies);
-        
         void updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies);
+        
+        void changeVerticiesColor_Vector(std::vector<HMesh::VertexID>& vertecies, CGLA::Vec4uc selectColor);
+        void changeVerticiesColor_Set(std::set<HMesh::VertexID>& vertecies, CGLA::Vec4uc selectColor);
+        void changeVerticiesColor_Vector(std::vector<HMesh::VertexID>& vertecies, bool isSelected);
+        void changeVerticiesColor_Set(std::set<HMesh::VertexID>& vertecies, bool isSelected);
+        
+#pragma mark - DELETE
+        float signedAngleBetweenReferenceVector3(CGLA::Vec3f refVector, CGLA::Vec3f vector);
     };
 }
 
