@@ -65,8 +65,8 @@ namespace PAMMesh
             RA_LOG_ERROR("Failed to load obj file %s", path);
             return 0;
         }
-        buildKDTree();
         bufferVertexDataToGPU();
+        buildKDTree();        
         traceEdgeInfo();
         return 1;
     }

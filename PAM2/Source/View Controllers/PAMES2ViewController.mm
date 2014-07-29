@@ -40,6 +40,10 @@ using namespace RAEngine;
     RARotationManager* rotManager;
     RAZoomManager* zoomManager;
     RATranslationManager* translationManager;
+    
+    //Auto backup
+    NSTimer* _autoSave;
+    UIAlertView* _restorSessionAlert;
 }
 @end
 
@@ -97,6 +101,13 @@ using namespace RAEngine;
     fShader = new string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
     polyline1->setupShaders(*vShader, *fShader);
     polyline2->setupShaders(*vShader, *fShader);
+    
+    if ([self backupExist]) {
+        _restorSessionAlert = [[UIAlertView alloc] initWithTitle:nil message:@"Restore last session" delegate:self cancelButtonTitle:nil otherButtonTitles:@"Yes", @"No", nil];
+        [_restorSessionAlert show];
+    } else {
+        [self startBackupTimer];
+    }
     
     UIButton* undoBtn = [UIButton buttonWithType:UIButtonTypeCustom];
     [undoBtn setFrame:CGRectMake(0, self.view.frame.size.height-100, 100, 100)];
@@ -172,19 +183,20 @@ using namespace RAEngine;
         
         pamManifold = new PAMManifold();
         pamManifold->setupShaders();
-        pamManifold->loadObjFile(objPath.UTF8String);
-        pamManifold->enabled = true;
-        
-        bounds = pamManifold->getBoundingBox();
-        
-        GLfloat zNear = 1.0f;
-        GLfloat newOriginZ = -1 * (zNear + bounds.radius);
-        GLfloat curOriginZ = bounds.center[2];
-        
-        Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
-        pamManifold->translate(tV);
-        viewVolumeCenter = tV + bounds.center;
-        [self setupBoundingBox];
+        if (pamManifold->loadObjFile(objPath.UTF8String)) {
+            pamManifold->enabled = true;
+            
+            bounds = pamManifold->getBoundingBox();
+            
+            GLfloat zNear = 1.0f;
+            GLfloat newOriginZ = -1 * (zNear + bounds.radius);
+            GLfloat curOriginZ = bounds.center[2];
+            
+            Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+            pamManifold->translate(tV);
+            viewVolumeCenter = tV + bounds.center;
+            [self setupBoundingBox];
+        }
     }
     
     [self setPaused:NO];
@@ -842,6 +854,19 @@ using namespace RAEngine;
     [self undo];
 }
 
+-(void)startBackupTimer {
+    _autoSave = [NSTimer timerWithTimeInterval:30
+                                        target:self
+                                      selector:@selector(backupSession)
+                                      userInfo:nil
+                                       repeats:YES];
+    [[NSRunLoop mainRunLoop] addTimer:_autoSave forMode:NSDefaultRunLoopMode];
+}
+
+-(void)stopBackupTimer {
+    [_autoSave invalidate];
+}
+
 #pragma mark - OpenGL Drawing
 
 -(void)update
@@ -1116,6 +1141,17 @@ void clearVector(std::vector<C*>& inputvector)
 	[self dismissViewControllerAnimated:YES completion:NULL];
 }
 
+#pragma mark - UIAlertView Delegate
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
+    if (_restorSessionAlert == alertView) {
+        if (buttonIndex == 0) {
+            [self restoreLastSession];
+        }
+        [self startBackupTimer];
+    }
+    [alertView dismissWithClickedButtonIndex:buttonIndex animated:YES];
+}
+
 #pragma mark - SettingsViewControllerDelegate
 
 -(void)emailObj
@@ -1231,6 +1267,99 @@ void clearVector(std::vector<C*>& inputvector)
 -(void)silhouetteScalingBrushSize:(float)width
 {
     PAMSettingsManager::getInstance().silhouetteScalingBrushSize = width;
+}
+
+#pragma mark - Save/Restore modeling session
+-(void)backupSession
+{
+    if (![self modelIsLoaded]) {
+        return;
+    }
+    
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0ul);
+    dispatch_async(queue, ^{
+        NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+        NSString* cacheFolder = [NSString stringWithFormat:@"%@/Backups", [paths objectAtIndex:0]];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:cacheFolder]) {
+            [[NSFileManager defaultManager] createDirectoryAtPath:cacheFolder withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        //        NSString *timeStampValue = [NSString stringWithFormat:@"%ld", (long)[[NSDate date] timeIntervalSince1970]];
+        NSString* filePath = [NSString stringWithFormat:@"%@/backup.obj", cacheFolder];
+        
+        
+        if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_AN_MOVED ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_ROTATE ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_ROTATION ||
+            pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_SCALING)
+        {
+            return;
+        }
+
+        bool saved = obj_save(filePath.UTF8String, *pamManifold);
+        
+        dispatch_sync(dispatch_get_main_queue(), ^{
+            if (saved) {
+                RA_LOG_INFO("Session saved");
+            } else {
+                RA_LOG_INFO("Failed to save session");
+            }
+        });
+    });
+}
+
+-(void)restoreLastSession
+{
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* cacheFolder = [NSString stringWithFormat:@"%@/Backups", [paths objectAtIndex:0]];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:cacheFolder]) {
+        
+        [self setPaused:YES]; //pause rendering
+        
+        NSFileManager* fileManager = [NSFileManager defaultManager];
+        NSArray* allBackups = [fileManager contentsOfDirectoryAtPath:cacheFolder error:nil];
+        NSArray* sortedBackups = [allBackups sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+        NSString* lastPath = [NSString stringWithFormat:@"%@/%@",cacheFolder, [sortedBackups lastObject]];
+        
+        //Reset all transformations. Remove all previous screws and plates
+        [self resetTransformations];
+        
+        if (pamManifold != nullptr) {
+            delete pamManifold;
+        }
+        
+        pamManifold = new PAMManifold();
+        pamManifold->setupShaders();
+        if (pamManifold->loadObjFile(lastPath.UTF8String))
+        {
+            pamManifold->enabled = true;
+            
+            bounds = pamManifold->getBoundingBox();
+            
+            GLfloat zNear = 1.0f;
+            GLfloat newOriginZ = -1 * (zNear + bounds.radius);
+            GLfloat curOriginZ = bounds.center[2];
+            
+            Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+            pamManifold->translate(tV);
+            viewVolumeCenter = tV + bounds.center;
+            [self setupBoundingBox];
+        }
+        
+        //Load obj file
+        [self setPaused:NO];
+    }
+}
+
+-(BOOL)backupExist {
+    NSArray* paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString* cacheFolder = [NSString stringWithFormat:@"%@/Backups", [paths objectAtIndex:0]];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:cacheFolder]) {
+        return NO;
+    } else {
+        return YES;
+    }
 }
 
 
