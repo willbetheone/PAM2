@@ -77,6 +77,9 @@ namespace PAMMesh
         };
         Modification modState;
         
+#pragma mark - SMOOTHING
+        void smoothAtPoint(CGLA::Vec3f touchPoint, float radius, int iter);
+
 #pragma mark - BODY CREATION
         bool createBody(std::vector<CGLA::Vec3f>& polyline1,
                         std::vector<CGLA::Vec3f>& polyline2,
@@ -137,6 +140,22 @@ namespace PAMMesh
 //        void continuePosingTranslate(CGLA::Vec3f translation);
 //        void endPosingTranslate(CGLA::Vec3f translation);
 
+#pragma mark - DELETE/DETACH BRANCH
+        bool detachBranch(CGLA::Vec3f touchPoint);
+        bool deleteBranch(CGLA::Vec3f touchPoint);
+        bool moveDetachedBranch(CGLA::Vec3f touchPoint);
+        bool attachDetachedBranch();
+
+#pragma mark - ROTATE DETACHED BRANCH
+        bool startRotateDetachedBranch(float angle);
+        bool continueRotateDetachedBranch(float angle);
+        void endRotateDetachedBranch(float angle);
+
+#pragma mark - SCALE DETACHED BRANCH
+        bool startScaleClonedBranch(float scale);
+        void continueScaleClonedBranch(float scale);
+        void endScaleClonedBranch(float scale);
+
     private:
         
         std::map<HMesh::VertexID, int> vertexIDtoIndex;
@@ -181,6 +200,27 @@ namespace PAMMesh
         HMesh::VertexAttributeVector<float> _bump_verticies_weigths;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_displacement;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_norms;
+        
+        //DELETING AND REPOSITIONING OF THE BRANCH
+        std::set<HMesh::VertexID> _detached_verticies;
+        BOOL _deletingBranchFromBody;
+        HMesh::HalfEdgeID _deleteBodyUpperRibEdge;
+        HMesh::HalfEdgeID _deleteBranchLowerRibEdge;
+        HMesh::HalfEdgeID _deleteDirectionSpineEdge;
+        HMesh::HalfEdgeID _deleteBranchSecondRingEdge;
+        int _deleteBranchNumberOfBoundaryRibs;
+        HMesh::VertexID _newAttachVertexID;
+        Vec _zRotateVec;
+        Vec _zRotatePos;
+        
+        //CLONING
+        HMesh::HalfEdgeID _cloningDirection;
+        HMesh::HalfEdgeID _cloningBodyUpperRibEdge;
+        HMesh::HalfEdgeID _cloningBranchLowerRibEdge;
+        HMesh::HalfEdgeID _cloningSecondRing;
+        HMesh::VertexID _newClonedVertexID;
+        int _copyNumBoundaryRibSegments;
+        
         
         void bufferVertexDataToGPU();
         
@@ -249,6 +289,9 @@ namespace PAMMesh
         std::set<HMesh::VertexID> smoothAlongRib(HMesh::HalfEdgeID rib, int iter, bool isSpine, float brushSize);
         
         std::set<HMesh::VertexID> smoothVerticies(std::vector<HMesh::VertexID> vIDs, int iter, bool isSpine, float brushSize);
+
+#pragma mark - DELETE/DETACH BRANCH UTILITIES
+        void closeHole(HMesh::HalfEdgeID hID, int& numOfEdges);
         
 #pragma mark -  UPDATE GPU DATA
         void updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies);

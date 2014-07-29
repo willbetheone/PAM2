@@ -230,6 +230,13 @@ using namespace RAEngine;
     UILongPressGestureRecognizer* longPress = [[ UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(handleLongPressGesture:)];
     longPress.numberOfTouchesRequired = 1;
     [view addGestureRecognizer:longPress];
+    
+    //Double Tap
+    UITapGestureRecognizer* doubleTap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleDoubleTapGesture:)];
+    doubleTap.numberOfTouchesRequired = 1;
+    doubleTap.numberOfTapsRequired = 2;
+    [view addGestureRecognizer:doubleTap];
+
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -249,6 +256,18 @@ using namespace RAEngine;
             break;
     }
     return state;
+}
+
+-(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender {
+    Vec3f modelCoord;
+    if (![self modelCoordinates:modelCoord forGesture:sender]) {
+        RA_LOG_WARN("Touched background");
+        return;
+    }
+    int iter = PAMSettingsManager::getInstance().tapSmoothing;
+//    float wrong_radius = 3*[self touchSize];
+    float radius = 3*[self touchSizeForFingerSize:8.0f];
+    pamManifold->smoothAtPoint(modelCoord,radius,iter);
 }
 
 -(void)handleLongPressGesture:(UIGestureRecognizer*)sender
@@ -311,7 +330,40 @@ using namespace RAEngine;
     }
     else
     {
-        if (pamManifold->modState == PAMManifold::Modification::NONE)
+        if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET)
+        {
+            if (sender.state == UIGestureRecognizerStateEnded) {
+                Vec3f rayOrigin;
+                if (![self rayOrigin:rayOrigin forGesture:sender]) {
+                    RA_LOG_WARN("Couldn't determine touch area");
+                    return;
+                }
+                CGPoint t = [sender translationInView:self.view];
+                float swipeLength = sqrtf(powf(t.x, 2) + pow(t.y, 2));
+                RA_LOG_INFO("Swipe length:%f", swipeLength);
+                if (swipeLength < 160) {
+                    pamManifold->detachBranch(rayOrigin);
+                    polyline1->enabled = false;
+                } else {
+                    //TODO needs a fix
+//                    pamManifold->deleteBranch(rayOrigin);
+                }
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED)
+        {
+            if (sender.state == UIGestureRecognizerStateEnded) {
+                pamManifold->attachDetachedBranch();
+                polyline1->enabled = false;
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_AN_MOVED)
+        {
+            if (sender.state == UIGestureRecognizerStateEnded) {
+                pamManifold->attachDetachedBranch();
+            }
+        }
+        else if (pamManifold->modState == PAMManifold::Modification::NONE)
         {
             if (sender.state == UIGestureRecognizerStateBegan)
             {
@@ -904,6 +956,12 @@ using namespace RAEngine;
     }
     rayDirection = Vec3f(invert_affine(rotManager->getRotationMatrix()) * Vec4f(0,0,-1,0));
     return YES;
+}
+
+-(BOOL)rayOrigin:(Vec3f&)rayOrigin forGesture:(UIGestureRecognizer*)gesture
+{
+    Vec3f rayDir;
+    return [self rayOrigin:rayOrigin rayDirection:rayDir forGesture:gesture];
 }
 
 -(BOOL)rayOrigin:(Vec3f&)rayOrigin rayDirection:(Vec3f&)rayDirection forGesture:(UIGestureRecognizer*)gesture

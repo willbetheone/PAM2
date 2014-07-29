@@ -15,6 +15,7 @@
 #include "../HMesh/obj_load.h"
 #include "RAPolylineUtilities.h"
 #include "Quatf.h"
+#include "Quatd.h"
 #include "PAMUtilities.h"
 #include "polarize.h"
 #include "Mat3x3d.h"
@@ -936,7 +937,23 @@ namespace PAMMesh
         }
         return allVerticiesSet;
     }
-
+    
+    void PAMManifold::smoothAtPoint(CGLA::Vec3f touchPoint, float radius, int iter)
+    {
+        VertexID closestPoint;
+        closestVertexID_3D(touchPoint,closestPoint);
+        
+        vector<VertexID> affectedVerticies;
+        vector<float> weights;
+        neighbours(affectedVerticies,closestPoint,weights,radius);
+        laplacian_smooth_verticies(*this, affectedVerticies, weights, iter);
+        
+        updateVertexPositionOnGPU_Vector(affectedVerticies);
+        updateVertexNormOnGPU_Vector(affectedVerticies);
+        //    [self changeVerticiesColor_Vector:prevAffectedVerticies toSelected:NO];
+        //    [self changeVerticiesColor_Vector:affectedVerticies toSelected:YES];
+        //        prevAffectedVerticies = affectedVerticies;
+    }
     
 #pragma mark - BODY CREATION
     
@@ -2734,6 +2751,323 @@ namespace PAMMesh
 //    {
 //        _translationCurrent = translation - _translationStart;
 //    }
+    
+#pragma mark - DELETE/DETACH BRANCH
+    bool PAMManifold::detachBranch(CGLA::Vec3f touchPoint)
+    {
+        if (modState != Modification::PIN_POINT_SET) {
+            RA_LOG_WARN("Cant detach. Pin point is not chosen");
+            return false;
+        }
+        
+        number_rib_edges(*this, edgeInfo);
+        //    if (_edgeInfo[_pinHalfEdgeID].edge_type == RIB_JUNCTION) {
+        //        NSLog(@"Can't detach at a branch junction");
+        //        [self.delegate displayHint:@"Can't detach at a branch junction"];
+        //        return NO;
+        //    }
+        
+//        [self saveState];
+        
+        //Decide which side to delete
+        Walker up = this->walker(_pinVertexID);
+        if (!edgeInfo[up.halfedge()].is_spine()) {
+            up = up.prev().opp();
+        }
+        assert(edgeInfo[up.halfedge()].is_spine());
+        Walker down = up.prev().opp().prev().opp();
+        assert(edgeInfo[down.halfedge()].is_spine());
+        assert(up.opp().vertex() == down.opp().vertex());
+        
+        Vec3f upCentr = centroid_for_rib(*this, up.next().halfedge(),edgeInfo);
+        Vec3f downCentr = centroid_for_rib(*this, down.next().halfedge(), edgeInfo);
+        Vec3f pinCentr = centroid_for_rib(*this, _pinHalfEdgeID);
+        
+        Vec3f upVec = upCentr - pinCentr;
+        Vec3f downVec = downCentr - pinCentr;
+        
+        Mat4x4f mvMatrix = getModelViewMatrix();
+        Vec3f pinCentroidWorld = mvMatrix.mul_3D_point(pinCentr);
+        Vec3f touchPointWorld = viewMatrix.mul_3D_point(touchPoint);
+
+        touchPointWorld[2] = pinCentroidWorld[2];
+        Vec3f touchPointModel = invert_affine(mvMatrix).mul_3D_point(touchPointWorld);
+        Vec3f touchDir = touchPointModel- pinCentr;
+        
+        bool deletingBranchFromBody = false;
+        Walker toWalker = up;
+        if (dot(touchDir, upVec) >= 0) {
+            toWalker = up;
+        } else if (dot(touchDir, downVec) >= 0) {
+            toWalker = down;
+        } else {
+            RA_LOG_ERROR("Couldn't decide witch side to detach");
+//            [self.delegate displayHint:@"Couldn't decide witch side to detach"];
+            return false;
+        }
+        _deletingBranchFromBody = deletingBranchFromBody;
+        
+        //Start flooding and get all the verticies to delete/move
+        _detached_verticies = allVerticiesInDirection(toWalker);
+        
+        //Save info
+        _deleteBodyUpperRibEdge = toWalker.prev().halfedge(); //botton rib
+        _deleteDirectionSpineEdge = toWalker.halfedge(); //spine
+        _deleteBranchLowerRibEdge = toWalker.next().halfedge(); //top rib
+        _deleteBranchSecondRingEdge = toWalker.next().opp().next().next().opp().next().next().halfedge();
+        
+        //Delete all connecting boundary spine edges
+        vector<HalfEdgeID> edgesToDelete;
+        for (Walker boundaryW = walker(_deleteBodyUpperRibEdge);
+             !boundaryW.full_circle();
+             boundaryW = boundaryW.next().opp().next())
+        {
+            edgesToDelete.push_back(boundaryW.next().halfedge());
+        }
+        _deleteBranchNumberOfBoundaryRibs = edgesToDelete.size();
+        for (HalfEdgeID hID: edgesToDelete) {
+            remove_edge(hID);
+        }
+        
+        bufferVertexDataToGPU();
+//        [self rebufferWithCleanup:NO bufferData:YES edgeTrace:NO];
+        
+        changeVerticiesColor_Set(_detached_verticies,true);
+        
+//        _pinPointLine = nil;
+        modState = Modification::BRANCH_DETACHED;
+        return true;
+    }
+    
+    bool PAMManifold::deleteBranch(CGLA::Vec3f touchPoint)
+    {
+        if (modState != Modification::PIN_POINT_SET) {
+            RA_LOG_WARN("Cant delete. Pin point is not chosen");
+            return false;
+        }
+        
+//        [self saveState];
+        
+        if (!detachBranch(touchPoint)) {
+            return false;
+        }
+
+        //Delete verticies
+        for (VertexID vID: _detached_verticies) {
+            remove_vertex(vID);
+        }
+        
+        Walker boundaryW = walker(_deleteBodyUpperRibEdge);
+        float boundaryRadius = rib_radius(*this, _deleteBodyUpperRibEdge, edgeInfo);
+        
+        if (_deletingBranchFromBody) {
+            int numOfEdges;
+            closeHole(_deleteBodyUpperRibEdge, numOfEdges);
+            Walker bWalkerOuter = walker(boundaryW.opp().halfedge());
+            
+            vector<VertexID> vertexToSmooth;
+            for (int i = 0; i < numOfEdges; i++) {
+                vertexToSmooth.push_back(bWalkerOuter.vertex());
+                bWalkerOuter = bWalkerOuter.next().opp().next();
+            }
+            
+            traceEdgeInfo();
+//            [self rebufferWithCleanup:NO bufferData:NO edgeTrace:YES];
+            
+            smoothVerticies(vertexToSmooth,1,true,boundaryRadius/3);
+            smoothVerticies(vertexToSmooth,1,false,boundaryRadius/3);
+        } else {
+//            VertexID poleVID = pole_from_hole(*this, boundaryW.halfedge());
+            traceEdgeInfo();
+//            [self rebufferWithCleanup:NO bufferData:NO edgeTrace:YES];
+            //        [self smoothPole:poleVID edgeDepth:3 iter:2];
+        }
+        
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
+        buildKDTree();
+        
+//        [self rebufferWithCleanup:YES bufferData:YES edgeTrace:YES];
+        deleteCurrentPinPoint();
+        
+        return true;
+    }
+    
+    bool PAMManifold::moveDetachedBranch(CGLA::Vec3f touchPoint) {
+        if (modState != Modification::BRANCH_DETACHED &&
+            modState != Modification::BRANCH_DETACHED_AN_MOVED)
+        {
+            NSLog(@"[WARNING][PolarAnnularMesh] Cant move. Branch was not deattached");
+            return NO;
+        }
+        
+        VertexID touchVID;
+        closestVertexID_3D(touchPoint, touchVID);
+        //check if you can possible move here
+        int numRibSegments = count_rib_segments(*this, edgeInfo, touchVID);
+        if (2*numRibSegments + 2 < _deleteBranchNumberOfBoundaryRibs) {
+            return NO;
+        }
+        
+        _newAttachVertexID = touchVID ;
+        Vec touchPos = pos(touchVID);
+        Vec normal = HMesh::normal(*this, touchVID);
+        
+        Vec boundaryCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo));
+        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo));
+        Vec toTouchPos = touchPos - boundaryCentroid;
+        secondRingCentroid += toTouchPos;
+        for (VertexID vid: _detached_verticies) {
+            pos(vid) = pos(vid) + toTouchPos;
+        }
+        
+        Vec currentNorm = secondRingCentroid - touchPos;
+        
+        CGLA::Quatd q;
+        q.make_rot(normalize(currentNorm), normalize(normal));
+        
+        for (VertexID vid: _detached_verticies) {
+            Vec p = pos(vid);
+            p -= touchPos;
+            p = q.apply(p);
+            p += touchPos;
+            pos(vid) = p;
+        }
+        
+        updateVertexPositionOnGPU_Set(_detached_verticies);
+        updateVertexNormOnGPU_Set(_detached_verticies);
+        
+        changeVerticiesColor_Set(_detached_verticies,true);
+        modState = Modification::BRANCH_DETACHED_AN_MOVED;
+
+        return true;
+    }
+    
+    bool PAMManifold::attachDetachedBranch() {
+
+        if (modState != Modification::BRANCH_DETACHED &&
+            modState != Modification::BRANCH_DETACHED_AN_MOVED)
+        {
+            RA_LOG_WARN("Cant attach. Havent detached");
+            return false;
+        }
+        
+        if (modState == Modification::BRANCH_DETACHED) {
+            stitchBranchToBody(_deleteBodyUpperRibEdge, _deleteBranchLowerRibEdge);
+            bufferVertexDataToGPU();
+            traceEdgeInfo();
+            buildKDTree();
+        } else if (modState == Modification::BRANCH_DETACHED_AN_MOVED) {
+            Walker boundaryW = walker(_deleteBodyUpperRibEdge);
+            float boundaryRadius = rib_boundary_radius(*this, _deleteBodyUpperRibEdge, edgeInfo);
+            
+            int numOfEdges;
+            if (_deletingBranchFromBody) {
+                closeHole(_deleteBodyUpperRibEdge,numOfEdges);
+                //            numOfEdges = 2*numOfEdges;
+                Walker bWalkerOuter = walker(boundaryW.opp().halfedge());
+                
+                vector<VertexID> vertexToSmooth;
+                for (int i = 0; i < numOfEdges; i++) {
+                    vertexToSmooth.push_back(bWalkerOuter.vertex());
+                    bWalkerOuter = bWalkerOuter.next().opp().next();
+                }
+                
+                traceEdgeInfo();
+                
+                smoothVerticies(vertexToSmooth,20,true,boundaryRadius);
+                smoothVerticies(vertexToSmooth,2,false,boundaryRadius);
+            } else {
+                VertexID poleVID = pole_from_hole(*this, boundaryW.halfedge());
+                numOfEdges = valency(*this, poleVID);
+                numOfEdges = numOfEdges/2;
+                
+                //            if (numOfEdges%2 != 0) {
+                //                numOfEdges = numOfEdges/2;
+                //            } else {
+                //                numOfEdges = numOfEdges/2+1;
+                //            }
+                
+                traceEdgeInfo();
+                //            [self smoothPole:poleVID edgeDepth:3 iter:2];
+            }
+            
+            VertexID touchedVID = _newAttachVertexID;
+            
+            //Create new pole
+            VertexID newPoleID;
+            float bWidth;
+            Vec3f holeCenter, holeNorm;
+            HalfEdgeID boundaryHalfEdge;
+            bool result = createHoleAtVertex(touchedVID,
+                                             numOfEdges,
+                                             newPoleID,
+                                             bWidth,
+                                             holeCenter,
+                                             holeNorm,
+                                             boundaryHalfEdge);
+            if (!result) {
+                return false;
+            }
+
+            HalfEdgeID deleteBranchUpperOppRibEdge = walker(_deleteBranchLowerRibEdge).opp().halfedge();
+            stitchBranchToBody(_deleteBranchLowerRibEdge , boundaryHalfEdge);
+            
+            vector<VertexID> verteciesToSmooth;
+            for (Walker w = walker(deleteBranchUpperOppRibEdge); !w.full_circle(); w = w.next().opp().next()) {
+                verteciesToSmooth.push_back(w.vertex());
+            }
+            //        verteciesToSmooth = verticies_along_the_rib(_manifold, deleteBranchUpperOppRibEdge, _edgeInfo);
+            smoothVerticies(verteciesToSmooth,10,true,boundaryRadius);
+            
+            bufferVertexDataToGPU();
+            traceEdgeInfo();
+            buildKDTree();
+        }
+        
+        _detached_verticies.clear();
+        modState = Modification::NONE;
+        return true;
+    }
+    
+    void PAMManifold::closeHole(HMesh::HalfEdgeID hID, int& numOfEdges)
+    {
+        Walker boundaryW = walker(hID);
+        while (valency(*this, boundaryW.vertex()) <= 4) {
+            boundaryW = boundaryW.next();
+        }
+        
+        Walker bWalker1 = walker(boundaryW.halfedge());
+        Walker bWalker2 = walker(boundaryW.next().halfedge());
+        
+        vector<HalfEdgeID> bEdges1;
+        vector<HalfEdgeID> bEdges2;
+        while (valency(*this, bWalker2.vertex()) <= 4)
+        {
+            bEdges1.push_back(bWalker1.halfedge());
+            bEdges2.push_back(bWalker2.halfedge());
+            bWalker1 = bWalker1.prev();
+            bWalker2 = bWalker2.next();
+        }
+        
+        for (int i = 0; i < bEdges1.size() ; i++) {
+            BOOL didStich = stitch_boundary_edges(bEdges1[i], bEdges2[i]);
+            RA_LOG_INFO("%i", didStich);
+            //            assert(didStich);
+        }
+        
+        numOfEdges = bEdges1.size() + 1;
+    }
+    
+//#pragma mark - ROTATE DETACHED BRANCH
+//    bool PAMManifold::startRotateDetachedBranch(float angle);
+//    bool PAMManifold::continueRotateDetachedBranch(float angle);
+//    void PAMManifold::endRotateDetachedBranch(float angle);
+//    
+//#pragma mark - SCALE DETACHED BRANCH
+//    bool PAMManifold::startScaleClonedBranch(float scale);
+//    void PAMManifold::continueScaleClonedBranch(float scale);
+//    void PAMManifold::endScaleClonedBranch(float scale);
     
 #pragma mark -  UPDATE GPU DATA
     
