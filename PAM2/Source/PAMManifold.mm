@@ -42,6 +42,17 @@ namespace PAMMesh
         modState = Modification::NONE;
     }
     
+    void PAMManifold::copyDataFromManifold(HMesh::Manifold& mani)
+    {
+        this->kernel = mani.kernel;
+        this->positions = mani.positions;
+        modState = Modification::NONE;
+        
+        bufferVertexDataToGPU();
+        traceEdgeInfo();
+        buildKDTree();
+    }
+    
     PAMManifold::~PAMManifold()
     {
         delete kdTree;
@@ -1282,7 +1293,7 @@ namespace PAMMesh
 
 #pragma mark - BRANCH CREATION
     
-    void PAMManifold::createBranch(std::vector<CGLA::Vec3f> touchPoints,
+    bool PAMManifold::createBranch(std::vector<CGLA::Vec3f> touchPoints,
                                    CGLA::Vec3f firstPoint,
                                    bool touchedModelStart,
                                    float touchSize,
@@ -1298,13 +1309,12 @@ namespace PAMMesh
         
         VertexID poleID;
         if (touchedNearPole(touchedVID,poleID)) {
-            extendBranchAtPole(poleID, touchPoints);
-            return;
+            return extendBranchAtPole(poleID, touchPoints);
         }
         
         if (touchPoints.size() < 6) {
             RA_LOG_WARN("Not enough points");
-            return;
+            return false;
         }
         
         //convert touch points to world space
@@ -1316,12 +1326,12 @@ namespace PAMMesh
         reduceLineToEqualSegments3D(rawSkeleton, touchPoints, c_step);
         if (rawSkeleton.size() < 4) {
             RA_LOG_WARN("Not enough controids");
-            return;
+            return false;
         }
 
         int limbWidth = branchWidthForAngle(angularWidth*DEGREES_TO_RADIANS, touchedVID);
         if (limbWidth <= 1 ) {
-            return;
+            return false;
         }
         RA_LOG_INFO("Limb Width: %i", limbWidth);
         
@@ -1333,11 +1343,7 @@ namespace PAMMesh
         HalfEdgeID boundaryHalfEdge;
         bool result = createHoleAtVertex(touchedVID, limbWidth, newPoleID, bWidth,
                                          holeCenter, holeNorm, boundaryHalfEdge);
-        
-        if (!result) {
-//            [self undo];
-            return;
-        }
+        assert(result);
         
         //closest to the first centroid between two fingers vertex in 2D space
         Mat4x4f mvMatrix = getModelViewMatrix();
@@ -1450,10 +1456,7 @@ namespace PAMMesh
         allVerticiesAndHalfEdges(newVerticies,newEdges,w.vertex());
         
         HalfEdgeID newBranchLowerRibEdge;
-        if (!boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges)) {
-//            [self undo];
-            return;
-        }
+        assert(boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges));
         
         Walker lowerBoundaryWalker = walker(newBranchLowerRibEdge);
         HalfEdgeID newBranchUpperRibEdge = lowerBoundaryWalker.opp().halfedge();
@@ -1499,9 +1502,11 @@ namespace PAMMesh
         buildKDTree();
         bufferVertexDataToGPU();
         traceEdgeInfo();
+        
+        return true;
     }
     
-    void PAMManifold::extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints)
+    bool PAMManifold::extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints)
     {
         assert(is_pole(*this, poleID));
         
@@ -1522,7 +1527,7 @@ namespace PAMMesh
         
         if (touchPoints.size() < 6 ) {
             RA_LOG_WARN("Garbage point data");
-            return;
+            return false;
         }
         
         //convert touch points to world space
@@ -1534,7 +1539,7 @@ namespace PAMMesh
         reduceLineToEqualSegments3D(rawSkeleton, touchPoints, c_step);
         if (rawSkeleton.size() < 4) {
             RA_LOG_WARN("Not enough controids");
-            return;
+            return false;
         }
         
 //        [self saveState];
@@ -1555,7 +1560,6 @@ namespace PAMMesh
         
         //Length
         float totalLength = 0;
-        Vec3f lastSkelet = skeleton[0];
         for (int i = 1; i < skeleton.size(); i++) {
             totalLength += length(skeleton[i-1] - skeleton[i]);
         }
@@ -1653,21 +1657,17 @@ namespace PAMMesh
         allVerticiesAndHalfEdges(newVerticies,newEdges,lastFaceWalker.vertex());
         
         HalfEdgeID newBranchLowerRibEdge;
-        if (!boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges)) {
-//            [self undo];
-            return;
-        }
+        assert(boundaryHalfEdgeForClonedMesh(newBranchLowerRibEdge,newEdges));
         
         stitchBranchToBody(upperRibID,newBranchLowerRibEdge);
         
         traceEdgeInfo();
-//        [self rebufferWithCleanup:NO bufferData:NO edgeTrace:YES];
         smoothAlongRib(lowerRibID,2,true,ribWidth);
         
         bufferVertexDataToGPU();
         buildKDTree();
-//        
-//        [self rebufferWithCleanup:YES bufferData:YES edgeTrace:YES];
+
+        return true;
     }
     
     int PAMManifold::branchWidthForAngle(float angle, HMesh::VertexID vID)
@@ -3161,7 +3161,7 @@ namespace PAMMesh
             modState != Modification::BRANCH_DETACHED_AN_MOVED)
         {
             RA_LOG_WARN("Cant move. Branch was not deattached");
-            return NO;
+            return false;
         }
         
         VertexID touchVID;
@@ -3169,7 +3169,7 @@ namespace PAMMesh
         //check if you can possible move here
         int numRibSegments = count_rib_segments(*this, edgeInfo, touchVID);
         if (2*numRibSegments + 2 < _deleteBranchNumberOfBoundaryRibs) {
-            return NO;
+            return false;
         }
         
         _newAttachVertexID = touchVID ;
@@ -3195,7 +3195,7 @@ namespace PAMMesh
             p = q.apply(p);
             p += touchPos;
             pos(vid) = p;
-        }
+        } 
         
         updateVertexPositionOnGPU_Set(_detached_verticies);
         updateVertexNormOnGPU_Set(_detached_verticies);
@@ -3479,7 +3479,7 @@ namespace PAMMesh
         //check if you can possible move here
         int numRibSegments = count_rib_segments(*this, edgeInfo, _newClonedVertexID);
         if (numRibSegments - 2 < _copyNumBoundaryRibSegments) {
-            return NO;
+            return false;
         }
         
 //        [self saveState];

@@ -91,8 +91,8 @@ namespace RAEngine
 
 
     private:
-        Vec3* positions;
-        Vec3* normals;
+//        Vec3* positions;
+//        Vec3* normals;
     protected:
         
         Mat4x4 translationMatrix;

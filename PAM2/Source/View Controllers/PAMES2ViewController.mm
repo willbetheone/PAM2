@@ -71,7 +71,7 @@ using namespace RAEngine;
     vector<RAPolyLine*> debugPolylines;
     
     //Undo
-    std::deque<PAMManifold> _undoQueue;
+    std::deque<HMesh::Manifold> _undoQueue;
 }
 @end
 
@@ -97,6 +97,13 @@ using namespace RAEngine;
     fShader = new string([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
     polyline1->setupShaders(*vShader, *fShader);
     polyline2->setupShaders(*vShader, *fShader);
+    
+    UIButton* undoBtn = [UIButton buttonWithType:UIButtonTypeCustom];
+    [undoBtn setFrame:CGRectMake(0, self.view.frame.size.height-100, 100, 100)];
+    [undoBtn addTarget:self action:@selector(undoButtonClicked:) forControlEvents:UIControlEventTouchUpInside];
+    undoBtn.autoresizingMask = UIViewAutoresizingFlexibleTopMargin;
+    [self.view addSubview:undoBtn];
+
 }
 
 - (void)viewDidUnload
@@ -248,9 +255,6 @@ using namespace RAEngine;
     singleTap.numberOfTapsRequired = 1;
     [singleTap requireGestureRecognizerToFail:doubleTap];
     [view addGestureRecognizer:singleTap];
-
-
-
 }
 
 -(GestureState)gestureStateForRecognizer:(UIGestureRecognizer*)sender
@@ -311,8 +315,13 @@ using namespace RAEngine;
             RA_LOG_WARN("Touched background");
             return;
         }
-        pamManifold->moveDetachedBranch(modelCoord);
-    } else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_BRANCH_FOR_CLONING) {
+
+        if (!pamManifold->moveDetachedBranch(modelCoord)) {
+            [self popSaved];
+        }
+    }
+    else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_BRANCH_FOR_CLONING)
+    {
         Vec3f modelCoord;
         if (![self modelCoordinates:modelCoord forGesture:sender]) {
             RA_LOG_WARN("Touched background");
@@ -336,7 +345,8 @@ using namespace RAEngine;
     }
 }
 
--(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender {
+-(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender
+{
     Vec3f modelCoord;
     if (![self modelCoordinates:modelCoord forGesture:sender]) {
         RA_LOG_WARN("Touched background");
@@ -374,6 +384,8 @@ using namespace RAEngine;
                 CGPoint t = [sender translationInView:self.view];
                 float swipeLength = sqrtf(powf(t.x, 2) + pow(t.y, 2));
                 RA_LOG_INFO("Swipe length:%f", swipeLength);
+
+                [self saveState];
                 if (swipeLength < 160) {
                     pamManifold->detachBranch(rayOrigin);
                     polyline1->enabled = false;
@@ -434,11 +446,15 @@ using namespace RAEngine;
                 sender.state == UIGestureRecognizerStateFailed)
             {
                 polyline1->enabled = false;
-                pamManifold->createBranch(polyline1Data,
-                                          firstPoint,
-                                          isFirsPointOnAModel,
-                                          [self touchSize],
-                                          PAMSettingsManager::getInstance().branchWidth);
+                [self saveState];
+                bool result = pamManifold->createBranch(polyline1Data,
+                                                        firstPoint,
+                                                        isFirsPointOnAModel,
+                                                        [self touchSize],
+                                                        PAMSettingsManager::getInstance().branchWidth);
+                if (!result) {
+                    [self popSaved];
+                }
             }
         }
     }
@@ -573,6 +589,7 @@ using namespace RAEngine;
                 } else if (sender.state == UIGestureRecognizerStateChanged) {
                     pamManifold->continueTranslatingBranchTree(axis);
                 } else if (sender.state == UIGestureRecognizerStateEnded) {
+                    [self saveState];
                     pamManifold->endTranslatingBranchTree(axis);
                 }
             } else if (pamManifold->modState == PAMManifold::Modification::NONE ||
@@ -595,7 +612,8 @@ using namespace RAEngine;
     }
 }
 
--(void)handleThreeFingerPanGesture:(UIPanGestureRecognizer*)sender {
+-(void)handleThreeFingerPanGesture:(UIPanGestureRecognizer*)sender
+{
     if (sender.state == UIGestureRecognizerStateEnded) {
         if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET) {
             Vec3f rayOrigin;
@@ -603,6 +621,7 @@ using namespace RAEngine;
                 RA_LOG_WARN("Couldn't determine touch area");
                 return;
             }
+            [self saveState];
             pamManifold->copyBranchToBuffer(rayOrigin);
         } else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE) {
             pamManifold->attachClonedBranch();
@@ -639,6 +658,7 @@ using namespace RAEngine;
             } else if (sender.state == UIGestureRecognizerStateChanged) {
                 pamManifold->continueBending(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
+                [self saveState];
                 pamManifold->endBendingWithAngle(sender.rotation);
             }
         }
@@ -678,6 +698,7 @@ using namespace RAEngine;
             } else if (sender.state == UIGestureRecognizerStateChanged) {
                 pamManifold->continuePosingRotate(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
+                [self saveState];
                 pamManifold->endPosingRotate(sender.rotation);
             }
         }
@@ -709,6 +730,7 @@ using namespace RAEngine;
             } else if (sender.state == UIGestureRecognizerStateChanged) {
                 pamManifold->continueScalingBranch(sender.scale);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
+                [self saveState];
                 pamManifold->endScalingBranchTree(sender.scale);
             }
         }
@@ -805,6 +827,7 @@ using namespace RAEngine;
                     pamManifold->changeScalingSingleRib(sender.scale);
                 }
             } else if (sender.state == UIGestureRecognizerStateEnded) {
+                [self saveState];
                 if (pamManifold->modState == PAMManifold::Modification::SCULPTING_BUMP_CREATION) {
                     pamManifold->endBumpCreation();
                 } else {
@@ -813,6 +836,10 @@ using namespace RAEngine;
             }
         }
     }
+}
+
+-(void)undoButtonClicked:(UIButton*)btn {
+    [self undo];
 }
 
 #pragma mark - OpenGL Drawing
@@ -1055,29 +1082,32 @@ void clearVector(std::vector<C*>& inputvector)
 }
 
 //#pragma mark - Undo
-//-(void)saveState
-//{
-//    if (_undoQueue.size() == 5) {
-//        _undoQueue.pop_front();
-//    }
-//    PAMManifold undoMani = *pamManifold;
-//    _undoQueue.push_back(undoMani);
-//}
-//
-//-(void)undo
-//{
-//    @synchronized(self) {
-//        if (!_undoQueue.empty()) {
-//            delete pamManifold;
-//            pamManifold = nullptr;
-//            pamManifold = &_undoQueue.back();
-//            _undoQueue.pop_back();
-//            
-////            [self deleteCurrentPinPoint];
-////            [self rebufferWithCleanup:NO bufferData:YES edgeTrace:YES];
-//        }
-//    }
-//}
+-(void)saveState
+{
+    if (_undoQueue.size() == 5) {
+        _undoQueue.pop_front();
+    }
+    HMesh::Manifold undoMani = *pamManifold;
+    _undoQueue.push_back(undoMani);
+}
+
+-(void)popSaved {
+    if (_undoQueue.size() > 0) {
+        _undoQueue.pop_front();
+    }
+}
+
+-(void)undo
+{
+    @synchronized(self) {
+        if (!_undoQueue.empty())
+        {
+            pamManifold->copyDataFromManifold(_undoQueue.back());
+            _undoQueue.pop_back();
+            polyline1->enabled = false;
+        }
+    }
+}
 
 #pragma mark - MFMailComposeViewControllerDelegate
 - (void)mailComposeController:(MFMailComposeViewController*)controller

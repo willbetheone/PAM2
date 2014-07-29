@@ -27,6 +27,8 @@ namespace PAMMesh
     public:
         PAMManifold();
         ~PAMManifold();
+        
+        void copyDataFromManifold(HMesh::Manifold& mani);
 
         void setupShaders();
         
@@ -88,7 +90,7 @@ namespace PAMMesh
                         bool debug);
         
 #pragma mark - BRANCH CREATION
-        void createBranch(std::vector<CGLA::Vec3f> touchPoints,
+        bool createBranch(std::vector<CGLA::Vec3f> touchPoints,
                           CGLA::Vec3f firstPoint,
                           bool touchedModel,
                           float touchSize,
@@ -283,7 +285,7 @@ namespace PAMMesh
 
         bool touchedNearPole(HMesh::VertexID touchID, HMesh::VertexID& poleID);
         
-        void extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints);
+        bool extendBranchAtPole(HMesh::VertexID poleID, std::vector<CGLA::Vec3f>& touchPoints);
 
 #pragma mark - PIVOT POINT UTILITIES
         bool toPivotFromPinDirection(HMesh::HalfEdgeID& toPivothID);
