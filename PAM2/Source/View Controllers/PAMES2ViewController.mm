@@ -209,47 +209,50 @@ using namespace RAEngine;
     }
     else
     {
-        if (sender.state == UIGestureRecognizerStateBegan)
+        if (pamManifold->modState == PAMManifold::Modification::NONE)
         {
-            polyline1Data.clear();
-            CGPoint touchPoint = [self touchPointFromGesture:sender];
-            GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
-            float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
-            
-            if (![self modelCoordinates:firstPoint
-                          forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)])
+            if (sender.state == UIGestureRecognizerStateBegan)
             {
+                polyline1Data.clear();
+                CGPoint touchPoint = [self touchPointFromGesture:sender];
+                GLubyte* pixelData = [self renderToOffscreenDepthBuffer:pamManifold];
+                float depth = [self depthForPoint:touchPoint depthBuffer:pixelData];
+                
+                if (![self modelCoordinates:firstPoint
+                              forTouchPoint:Vec3f(touchPoint.x, touchPoint.y, depth)])
+                {
+                    RA_LOG_WARN("Touched background");
+                    return;
+                }
+                
+                isFirsPointOnAModel = (depth < 0) ? NO : YES;
+                delete[] pixelData;
+            }
+            
+            //Add touch point to a line
+            CGPoint touchPoint = [self touchPointFromGesture:sender];
+            Vec3f rayOrigin;
+            if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint]) {
                 RA_LOG_WARN("Touched background");
                 return;
             }
-            
-            isFirsPointOnAModel = (depth < 0) ? NO : YES;
-            delete[] pixelData;
-        }
-        
-        //Add touch point to a line
-        CGPoint touchPoint = [self touchPointFromGesture:sender];
-        Vec3f rayOrigin;
-        if (![self rayOrigin:rayOrigin forTouchPoint:touchPoint]) {
-            RA_LOG_WARN("Touched background");
-            return;
-        }
-        polyline1Data.push_back(rayOrigin);
-        if (polyline1Data.size() > 1) {
-            polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
-            polyline1->enabled = true;
-        }
+            polyline1Data.push_back(rayOrigin);
+            if (polyline1Data.size() > 1) {
+                polyline1->bufferVertexDataToGPU(polyline1Data, Vec4uc(255,0,0,255), GL_LINE_STRIP);
+                polyline1->enabled = true;
+            }
 
-        if (sender.state == UIGestureRecognizerStateEnded ||
-            sender.state == UIGestureRecognizerStateCancelled ||
-            sender.state == UIGestureRecognizerStateFailed)
-        {
-            polyline1->enabled = false;
-            pamManifold->endCreateBranchBended(polyline1Data,
-                                               firstPoint,
-                                               isFirsPointOnAModel,
-                                               [self touchSizeForGesture:sender],
-                                               PAMSettingsManager::getInstance().branchWidth);
+            if (sender.state == UIGestureRecognizerStateEnded ||
+                sender.state == UIGestureRecognizerStateCancelled ||
+                sender.state == UIGestureRecognizerStateFailed)
+            {
+                polyline1->enabled = false;
+                pamManifold->createBranch(polyline1Data,
+                                          firstPoint,
+                                          isFirsPointOnAModel,
+                                          [self touchSizeForGesture:sender],
+                                          PAMSettingsManager::getInstance().branchWidth);
+            }
         }
     }
 }

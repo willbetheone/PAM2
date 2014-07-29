@@ -86,18 +86,17 @@ namespace PAMMesh
                         bool debug);
         
 #pragma mark - BRANCH CREATION
-        void endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
-                                   CGLA::Vec3f firstPoint,
-                                   bool touchedModel,
-                                   float touchSize,
-                                   float angularWidth);
+        void createBranch(std::vector<CGLA::Vec3f> touchPoints,
+                          CGLA::Vec3f firstPoint,
+                          bool touchedModel,
+                          float touchSize,
+                          float angularWidth);
 
 #pragma mark - BUMP CREATION
-        void startBumpCreation(CGLA::Vec3f touchPoint,
-                               float brushSize,
-                               float brushDepth);
+        void startBumpCreation(CGLA::Vec3f touchPoint, float brushSize, float brushDepth);
         void continueBumpCreation(float brushDepth);
         void endBumpCreation();
+        
 #pragma mark - RIB SCALING
         void startScalingSingleRib(CGLA::Vec3f touchPoint,
                                    bool secondPointOnTheModel,
@@ -130,7 +129,6 @@ namespace PAMMesh
         HMesh::VertexAttributeVector<float> _bump_verticies_weigths;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_displacement;
         HMesh::VertexAttributeVector<CGLA::Vec3f> _bump_current_norms;
-        
         
         void bufferVertexDataToGPU();
         

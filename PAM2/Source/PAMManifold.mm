@@ -985,11 +985,11 @@ namespace PAMMesh
 
 #pragma mark - BRANCH CREATION
     
-    void PAMManifold::endCreateBranchBended(std::vector<CGLA::Vec3f> touchPoints,
-                                            CGLA::Vec3f firstPoint,
-                                            bool touchedModelStart,
-                                            float touchSize,
-                                            float angularWidth)
+    void PAMManifold::createBranch(std::vector<CGLA::Vec3f> touchPoints,
+                                   CGLA::Vec3f firstPoint,
+                                   bool touchedModelStart,
+                                   float touchSize,
+                                   float angularWidth)
                                             
     {
         VertexID touchedVID;
