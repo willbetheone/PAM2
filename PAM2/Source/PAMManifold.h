@@ -148,7 +148,7 @@ namespace PAMMesh
 
 #pragma mark - ROTATE DETACHED BRANCH
         bool startRotateDetachedBranch(float angle);
-        bool continueRotateDetachedBranch(float angle);
+        void continueRotateDetachedBranch(float angle);
         void endRotateDetachedBranch(float angle);
 
 #pragma mark - SCALE DETACHED BRANCH
@@ -220,6 +220,17 @@ namespace PAMMesh
         HMesh::HalfEdgeID _cloningSecondRing;
         HMesh::VertexID _newClonedVertexID;
         int _copyNumBoundaryRibSegments;
+        
+        //COPY BUFFER
+        std::vector<CGLA::Vec3f> _copyVerticies;
+        std::vector<int> _copyFaces;
+        std::vector<int> _copyIndices;
+        std::vector<HMesh::VertexID> _cloned_verticies;
+        std::set<HMesh::VertexID> _original_verticies_copied;
+
+        
+        //Modification mode
+        Modification _prevMod;
         
         
         void bufferVertexDataToGPU();

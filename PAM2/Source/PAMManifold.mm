@@ -517,6 +517,72 @@ namespace PAMMesh
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
+        else if (modState == Modification::BRANCH_DETACHED_ROTATE) {
+            CGLA::Quatd q;
+            q.make_rot(-_rotAngle, _zRotateVec);
+            
+            for (VertexID vid: _detached_verticies) {
+                Vec p = pos(vid);
+                p -= _zRotatePos;
+                p = q.apply(p);
+                p += _zRotatePos;
+                _current_rot_position[vid] = Vec3f(p);
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _detached_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        } else if (modState == Modification::BRANCH_CLONE_ROTATION) {
+            CGLA::Quatd q;
+            q.make_rot(-_rotAngle, _zRotateVec);
+            
+            for (VertexID vid: _cloned_verticies) {
+                Vec p = pos(vid);
+                p -= _zRotatePos;
+                p = q.apply(p);
+                p += _zRotatePos;
+                _current_rot_position[vid] = Vec3f(p);;
+            }
+
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _cloned_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        } else if (modState == Modification::BRANCH_CLONE_SCALING) {
+            
+            Mat4x4f toOrigin = translation_Mat4x4f(-1 * _centerOfRotation);
+            Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+            Mat4x4f scaleMatrix = scaling_Mat4x4f(Vec3f(_scaleFactor));
+            Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+            
+            for (VertexID vid: _cloned_verticies) {
+                _current_rot_position[vid] = tMatrix.mul_3D_point(posf(vid));
+            }
+            
+            positionDataBuffer->bind();
+            
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _cloned_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
         else if (modState == Modification::BRANCH_POSE_ROTATE)
         {
             Vec3f zAxis = invert_affine(viewMatrix).mul_3D_vector(Vec3f(0, 0, -1));
@@ -2897,7 +2963,7 @@ namespace PAMMesh
         if (modState != Modification::BRANCH_DETACHED &&
             modState != Modification::BRANCH_DETACHED_AN_MOVED)
         {
-            NSLog(@"[WARNING][PolarAnnularMesh] Cant move. Branch was not deattached");
+            RA_LOG_WARN("Cant move. Branch was not deattached");
             return NO;
         }
         
@@ -3059,15 +3125,99 @@ namespace PAMMesh
         numOfEdges = bEdges1.size() + 1;
     }
     
-//#pragma mark - ROTATE DETACHED BRANCH
-//    bool PAMManifold::startRotateDetachedBranch(float angle);
-//    bool PAMManifold::continueRotateDetachedBranch(float angle);
-//    void PAMManifold::endRotateDetachedBranch(float angle);
-//    
-//#pragma mark - SCALE DETACHED BRANCH
-//    bool PAMManifold::startScaleClonedBranch(float scale);
-//    void PAMManifold::continueScaleClonedBranch(float scale);
-//    void PAMManifold::endScaleClonedBranch(float scale);
+#pragma mark - ROTATE DETACHED BRANCH
+    bool PAMManifold::startRotateDetachedBranch(float angle)
+    {
+        if (modState != Modification::BRANCH_DETACHED &&
+            modState != Modification::BRANCH_DETACHED_AN_MOVED)
+        {
+            RA_LOG_WARN("Cant rotate non detached branch");
+            return false;
+        }
+        
+        _rotAngle = angle;
+        Vec boundaryCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo));
+        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo));
+        Vec boundaryBodyCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBodyUpperRibEdge, edgeInfo));
+        Vec currentNorm;
+        if (modState == Modification::BRANCH_DETACHED) {
+            currentNorm = boundaryCentroid - boundaryBodyCentroid;
+            _zRotatePos = boundaryBodyCentroid;
+        } else if (modState == Modification::BRANCH_DETACHED_AN_MOVED) {
+            Vec touchPos = pos(_newAttachVertexID);
+            currentNorm = secondRingCentroid - touchPos;
+            _zRotatePos = touchPos;
+        }
+        _zRotateVec = currentNorm;
+        _prevMod = modState;
+        _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+        
+        modState = Modification::BRANCH_DETACHED_ROTATE;
+        return true;
+    }
+    
+    void PAMManifold::continueRotateDetachedBranch(float angle)
+    {
+        _rotAngle = angle;
+    }
+    
+    void PAMManifold::endRotateDetachedBranch(float angle)
+    {
+        _rotAngle = angle;
+        modState = _prevMod;
+        
+        CGLA::Quatd q;
+        q.make_rot(-_rotAngle, _zRotateVec);
+        
+        for (VertexID vid: _detached_verticies) {
+            Vec p = pos(vid);
+            p -= _zRotatePos;
+            p = q.apply(p);
+            p += _zRotatePos;
+            pos(vid) = p;
+        }
+    }
+    
+#pragma mark - SCALE DETACHED BRANCH
+    bool PAMManifold::startScaleClonedBranch(float scale)
+    {
+        if (modState != Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE)
+        {
+            RA_LOG_WARN("Cant rotate non cloned branch");
+            return false;
+        }
+        
+        _scaleFactor = scale;
+        
+        _centerOfRotation = posf(_newClonedVertexID);
+        
+        _prevMod = modState;
+        _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+        
+        modState = Modification::BRANCH_CLONE_SCALING;
+        return true;
+    }
+    
+    void PAMManifold::continueScaleClonedBranch(float scale)
+    {
+        _scaleFactor = scale;
+    }
+    
+    void PAMManifold::endScaleClonedBranch(float scale)
+    {
+        _scaleFactor = scale;
+        modState = _prevMod;
+        
+        Mat4x4f toOrigin = translation_Mat4x4f(-1 * _centerOfRotation);
+        Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+        Mat4x4f scaleMatrix = scaling_Mat4x4f(Vec3f(_scaleFactor));
+        Mat4x4f tMatrix = (fromOrigin * scaleMatrix) * toOrigin;
+        
+        for (VertexID vid: _cloned_verticies) {
+            pos(vid) = tMatrix.mul_3D_point(pos(vid));
+        }
+        modState = Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE;
+    }
     
 #pragma mark -  UPDATE GPU DATA
     

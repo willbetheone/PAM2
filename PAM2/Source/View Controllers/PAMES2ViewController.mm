@@ -596,11 +596,11 @@ using namespace RAEngine;
                  pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_ROTATE)
         {
             if (sender.state == UIGestureRecognizerStateBegan) {
-//                [_pMesh startRotateDetachedBranch:rotGesture.rotation];
+                pamManifold->startRotateDetachedBranch(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateChanged) {
-//                [_pMesh continueRotateDetachedBranch:rotGesture.rotation];
+                pamManifold->continueRotateDetachedBranch(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
-//                [_pMesh endRotateDetachedBranch:rotGesture.rotation];
+                pamManifold->endRotateDetachedBranch(sender.rotation);
             }
         }
         else if (pamManifold->modState == PAMManifold::Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE ||
@@ -665,11 +665,11 @@ using namespace RAEngine;
                  pamManifold->modState == PAMManifold::Modification::BRANCH_CLONE_SCALING )
         {
             if (sender.state == UIGestureRecognizerStateBegan) {
-//                [_pMesh startScaleClonedBranch:pinch.scale];
+                pamManifold->startScaleClonedBranch(sender.scale);
             } else if (sender.state == UIGestureRecognizerStateChanged) {
-//                [_pMesh continueScaleClonedBranch:pinch.scale];
+                pamManifold->continueScaleClonedBranch(sender.scale);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
-//                [_pMesh endScaleClonedBranch:pinch.scale];
+                pamManifold->endScaleClonedBranch(sender.scale);
             }
         }
         else if (pamManifold->modState == PAMManifold::Modification::NONE ||
