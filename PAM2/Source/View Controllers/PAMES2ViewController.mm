@@ -20,6 +20,7 @@
 #include "glu.h"
 #include "PAMSettingsManager.h"
 #include "RAPolyLine.h"
+#include <deque>
 
 #define SHOW_DEBUG_LINES 0
 
@@ -68,6 +69,9 @@ using namespace RAEngine;
     string* fShader;
     
     vector<RAPolyLine*> debugPolylines;
+    
+    //Undo
+    std::deque<PAMManifold> _undoQueue;
 }
 @end
 
@@ -130,6 +134,68 @@ using namespace RAEngine;
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+//Load empty workspace
+-(void)loadEmptyMeshData
+{
+    bounds = {Vec3f(-1,-1,-1), Vec3f(1,1,1), Vec3f(0,0,0), 2*sqrtf(3.0f)/2.0f};
+    
+    GLfloat zNear = 1.0;
+    GLfloat newOriginZ = -1*(zNear + bounds.radius);
+    GLfloat curOriginZ = bounds.center[2];
+    
+    Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+    viewVolumeCenter = tV + bounds.center;
+    
+    [self setupBoundingBox];
+}
+
+//Load initial mesh from OBJ file
+-(void)loadMeshData
+{
+    [self setPaused:YES]; //pause rendering
+    
+    //Load obj file
+    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"HAND PAM 15" ofType:@"obj"];
+    if (objPath) {
+        if (pamManifold != nullptr) {
+            delete pamManifold;
+        }
+        
+        pamManifold = new PAMManifold();
+        pamManifold->setupShaders();
+        pamManifold->loadObjFile(objPath.UTF8String);
+        pamManifold->enabled = true;
+        
+        bounds = pamManifold->getBoundingBox();
+        
+        GLfloat zNear = 1.0f;
+        GLfloat newOriginZ = -1 * (zNear + bounds.radius);
+        GLfloat curOriginZ = bounds.center[2];
+        
+        Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
+        pamManifold->translate(tV);
+        viewVolumeCenter = tV + bounds.center;
+        [self setupBoundingBox];
+    }
+    
+    [self setPaused:NO];
+}
+
+-(void)setupBoundingBox
+{
+    if (boundingBox != nullptr) {
+        delete boundingBox;
+    }
+    
+    boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
+    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
+    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
+    boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
+    boundingBox->bufferVertexDataToGPU();
+    boundingBox->translate(viewVolumeCenter - bounds.center);
+    boundingBox->enabled = true;
 }
 
 #pragma mark - Gesture Recongnizers
@@ -286,7 +352,7 @@ using namespace RAEngine;
                 pamManifold->createBranch(polyline1Data,
                                           firstPoint,
                                           isFirsPointOnAModel,
-                                          [self touchSizeForGesture:sender],
+                                          [self touchSize],
                                           PAMSettingsManager::getInstance().branchWidth);
             }
         }
@@ -408,6 +474,7 @@ using namespace RAEngine;
             gluUnProjectf(rayStartWindow, projectionMatrix, viewport, rayOrigin);
             Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
             axis = invert_affine(viewMatrix).mul_3D_vector(axis);
+
             if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET ||
                 pamManifold->modState == PAMManifold::Modification::BRANCH_TRANSLATION )
             {
@@ -439,11 +506,9 @@ using namespace RAEngine;
 //                    [_pMesh endPosingTranslate:translation];
                 }
             }
-
         }
     }
 }
-
 
 -(void)handleRotationGesture:(UIRotationGestureRecognizer*)sender
 {
@@ -506,14 +571,13 @@ using namespace RAEngine;
                     RA_LOG_WARN("Touched background");
                     return;
                 }
-//                [_pMesh statePosingRotateWithTouchPoint:modelCoord angle:rotGesture.rotation];
+                pamManifold->startPosingRotate(modelCoord, sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateChanged) {
-//                [_pMesh continuePosingRotate:rotGesture.rotation];
+                pamManifold->continuePosingRotate(sender.rotation);
             } else if (sender.state == UIGestureRecognizerStateEnded) {
-//                [_pMesh endPosingRotate:rotGesture.rotation];
+                pamManifold->endPosingRotate(sender.rotation);
             }
         }
-
     }
 }
 
@@ -572,7 +636,7 @@ using namespace RAEngine;
                 float depth1 = [self depthForPoint:touchPoint1 depthBuffer:pixelData];
                 float depth2 = [self depthForPoint:touchPoint2 depthBuffer:pixelData];
                 
-                float touchSize = [self touchSizeForGesture:sender];
+                float touchSize = [self touchSize];
                 
                 if (depth1 < 0 || depth2 < 0)
                 {
@@ -646,68 +710,6 @@ using namespace RAEngine;
             }
         }
     }
-}
-
-//Load empty workspace
--(void)loadEmptyMeshData
-{
-    bounds = {Vec3f(-1,-1,-1), Vec3f(1,1,1), Vec3f(0,0,0), 2*sqrtf(3.0f)/2.0f};
-
-    GLfloat zNear = 1.0;
-    GLfloat newOriginZ = -1*(zNear + bounds.radius);
-    GLfloat curOriginZ = bounds.center[2];
-
-    Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
-    viewVolumeCenter = tV + bounds.center;
-    
-    [self setupBoundingBox];
-}
-
-//Load initial mesh from OBJ file
--(void)loadMeshData
-{
-    [self setPaused:YES]; //pause rendering
-    
-    //Load obj file
-    NSString* objPath = [[NSBundle mainBundle] pathForResource:@"HAND PAM 15" ofType:@"obj"];
-    if (objPath) {
-        if (pamManifold != nullptr) {
-            delete pamManifold;
-        }
-        
-        pamManifold = new PAMManifold();
-        pamManifold->setupShaders();
-        pamManifold->loadObjFile(objPath.UTF8String);
-        pamManifold->enabled = true;
-        
-        bounds = pamManifold->getBoundingBox();
-        
-        GLfloat zNear = 1.0f;
-        GLfloat newOriginZ = -1 * (zNear + bounds.radius);
-        GLfloat curOriginZ = bounds.center[2];
-        
-        Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
-        pamManifold->translate(tV);
-        viewVolumeCenter = tV + bounds.center;
-        [self setupBoundingBox];
-    }
-    
-    [self setPaused:NO];
-}
-
--(void)setupBoundingBox
-{
-    if (boundingBox != nullptr) {
-        delete boundingBox;
-    }
-    
-    boundingBox = new RABoundingBox(bounds.minBound, bounds.maxBound);
-    std::string vShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"vsh"].UTF8String);
-    std::string fShader_Cplus([[NSBundle mainBundle] pathForResource:@"PosColorShader" ofType:@"fsh"].UTF8String);
-    boundingBox->setupShaders(vShader_Cplus, fShader_Cplus);
-    boundingBox->bufferVertexDataToGPU();
-    boundingBox->translate(viewVolumeCenter - bounds.center);
-    boundingBox->enabled = true;
 }
 
 #pragma mark - OpenGL Drawing
@@ -910,16 +912,9 @@ using namespace RAEngine;
     return [self rayOrigin:rayOrigin rayDirection:rayDirection forTouchPoint:touchPoint];
 }
 
--(float)touchSizeForGesture:(UIGestureRecognizer*)gesture
+-(float)touchSize
 {
-    float touchSizeMM;
-    if ([gesture respondsToSelector:@selector(touchSize)])  {
-        touchSizeMM = [[gesture valueForKey:@"touchSize"] floatValue];
-    } else {
-        touchSizeMM = 10;
-    }
-    float touchSize = [self touchSizeForFingerSize:touchSizeMM];
-    return touchSize;
+    return [self touchSizeForFingerSize:10];
 }
 
 -(float)touchSizeForFingerSize:(float)touchSizeMM
@@ -949,6 +944,31 @@ void clearVector(std::vector<C*>& inputvector)
     }
     inputvector.clear();
 }
+
+//#pragma mark - Undo
+//-(void)saveState
+//{
+//    if (_undoQueue.size() == 5) {
+//        _undoQueue.pop_front();
+//    }
+//    PAMManifold undoMani = *pamManifold;
+//    _undoQueue.push_back(undoMani);
+//}
+//
+//-(void)undo
+//{
+//    @synchronized(self) {
+//        if (!_undoQueue.empty()) {
+//            delete pamManifold;
+//            pamManifold = nullptr;
+//            pamManifold = &_undoQueue.back();
+//            _undoQueue.pop_back();
+//            
+////            [self deleteCurrentPinPoint];
+////            [self rebufferWithCleanup:NO bufferData:YES edgeTrace:YES];
+//        }
+//    }
+//}
 
 #pragma mark - MFMailComposeViewControllerDelegate
 - (void)mailComposeController:(MFMailComposeViewController*)controller

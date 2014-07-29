@@ -516,6 +516,49 @@ namespace PAMMesh
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
+        else if (modState == Modification::BRANCH_POSE_ROTATE)
+        {
+            Vec3f zAxis = invert_affine(viewMatrix).mul_3D_vector(Vec3f(0, 0, -1));
+            Mat4x4f toOrigin = translation_Mat4x4f(-1*_centerOfRotation);
+            Mat4x4f rotMatrix = rotation_Mat4x4f(zAxis, -1*_rotAngle);
+            Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+            Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+            
+            for (VertexID vID: _transformed_verticies) {
+                _current_rot_position[vID] = tMatrix.mul_3D_point(posf(vID));;
+            }
+            
+            positionDataBuffer->bind();
+            unsigned char* temp = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
+            for (VertexID vid: _transformed_verticies) {
+                Vec3f pos = _current_rot_position[vid];
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), pos.get(), sizeof(Vec3f));
+            }
+            
+            //deformable area
+            map<int,Mat4x4f> rotMatricies;
+            for (auto lid: _loopsToDeform) {
+                float weight = _ringToDeformValue[lid];
+                float angle = weight * _rotAngle;
+                Mat4x4f rotMatrix = rotation_Mat4x4f(zAxis, -1*angle);
+                Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+                rotMatricies[lid]=tMatrix;
+            }
+            
+            for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+                VertexID vid = it->first;
+                int lid = it->second;
+                Mat4x4f tMatrix = rotMatricies[lid];
+                Vec3f newPos = tMatrix.mul_3D_point(posf(vid));
+                
+                int index = vertexIDtoIndex[vid];
+                memcpy(temp + index*sizeof(Vec3f), newPos.get(), sizeof(Vec3f));
+            }
+            
+            glUnmapBufferOES(GL_ARRAY_BUFFER);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+        }
     }
     
     void PAMManifold::subdivide()
@@ -2141,6 +2184,101 @@ namespace PAMMesh
         return YES;
     }
     
+    bool PAMManifold::setTransformedAreaForPosingRotate(HMesh::Walker& awayFromTransform)
+    {
+        
+        Walker toTransform = awayFromTransform.opp().next().opp().next();
+        number_rib_edges(*this, edgeInfo); // number rings
+        assert(edgeInfo[awayFromTransform.halfedge()].is_spine());
+        
+        map<VertexID, int> vertexToLoop;
+        vector<int> loopsToDeform;
+        map<int, float> ringToDeformValue;
+        
+        float dist = 0.2;
+        float cur_dist = 0;
+        Walker curWalker = awayFromTransform;
+        Vec3f lastCentr = centroid_for_rib(*this, _pivotHalfEdgeID, edgeInfo);
+        while (cur_dist <= dist && !is_pole(*this, curWalker.vertex()) && !edgeInfo[curWalker.next().halfedge()].is_rib_junction()) {
+            HalfEdgeID loopRib = curWalker.next().halfedge();
+            int loopID = edgeInfo[loopRib].id;
+            loopsToDeform.push_back(loopID);
+            
+            vector<VertexID> verticies = verticies_along_the_rib(*this, loopRib, edgeInfo);
+            for (VertexID vID: verticies) {
+                vertexToLoop[vID] = loopID;
+                _transition_verticies.push_back(vID);
+            }
+            
+            Vec3f curCentr = centroid_for_rib(*this, loopRib, edgeInfo);
+            cur_dist += (curCentr - lastCentr).length();
+            lastCentr = curCentr;
+            curWalker = curWalker.next().opp().next();
+        }
+        curWalker = curWalker.next().opp().next();
+        _deformDirHalfEdge = curWalker.opp().halfedge();
+        std::reverse(loopsToDeform.begin(),loopsToDeform.end());
+        
+        int loopID = edgeInfo[_pivotHalfEdgeID].id;
+        loopsToDeform.push_back(loopID);
+        vector<VertexID> verticies = verticies_along_the_rib(*this, _pivotHalfEdgeID, edgeInfo);
+        for (VertexID vID: verticies) {
+            vertexToLoop[vID] = loopID;
+            _transition_verticies.push_back(vID);
+        }
+        
+        cur_dist = 0;
+        curWalker = toTransform;
+        lastCentr = centroid_for_rib(*this, _pivotHalfEdgeID, edgeInfo);
+        while (cur_dist <= dist && !is_pole(*this, curWalker.vertex()) && !edgeInfo[curWalker.next().halfedge()].is_rib_junction()) {
+            HalfEdgeID loopRib = curWalker.next().halfedge();
+            int loopID = edgeInfo[loopRib].id;
+            loopsToDeform.push_back(loopID);
+            
+            vector<VertexID> verticies = verticies_along_the_rib(*this, loopRib, edgeInfo);
+            for (VertexID vID: verticies) {
+                vertexToLoop[vID] = loopID;
+                _transition_verticies.push_back(vID);
+            }
+            
+            Vec3f curCentr = centroid_for_rib(*this, loopRib, edgeInfo);
+            cur_dist += (curCentr - lastCentr).length();
+            lastCentr = curCentr;
+            curWalker = curWalker.next().opp().next();
+        }
+        _deformDirHalfEdgeEnd = curWalker.prev().halfedge();
+        _transformed_verticies = allVerticiesInDirection(curWalker);
+        
+        //Get centroid for future rotation
+        _centerOfRotation = centroid_for_rib(*this, _pivotHalfEdgeID, edgeInfo);
+        
+        //Assign weight deformation for angle to the loops
+        int s = ceil(loopsToDeform.size()/2);
+        for (int i = 0; i < loopsToDeform.size(); i++) {
+            int lID = loopsToDeform[i];
+            float r = loopsToDeform.size();
+            float x = (i+1)/r;
+            float weight = pow(pow(x, 2)-1, 2);
+            ringToDeformValue[lID] = 1 - weight;
+        }
+        
+        //    for (int i = s; i < loopsToDeform.size(); i++) {
+        //        int lID = loopsToDeform[i];
+        //        float x = ((i%s)+1)/(float)s;
+        //        float weight = pow(pow(x, 2)-1, 2);
+        //        ringToDeformValue[lID] = weight;
+        //    }
+        
+        _vertexToLoop = vertexToLoop;
+        _loopsToDeform = loopsToDeform;
+        _ringToDeformValue = ringToDeformValue;
+        
+        changeVerticiesColor_Set(_transformed_verticies,true);
+        changeVerticiesColor_Vector(_transition_verticies, Vec4uc(0, 120, 180, 255));
+        return true;
+    }
+
+    
 #pragma mark - ROTATING THE BRANCH TREE
     void PAMManifold::startBending(CGLA::Vec3f touchPoint, float angle)
     {
@@ -2195,7 +2333,6 @@ namespace PAMMesh
         }
         
         rotateRingsFrom(_deformDirHalfEdge, _pivotHalfEdgeID);
-//        rotateRingsFrom2(_deformDirHalfEdge, _pivotHalfEdgeID);
         
         modState = Modification::PIN_POINT_SET;
         
@@ -2424,7 +2561,180 @@ namespace PAMMesh
         changeVerticiesColor_Set(_transformed_verticies,false);
         changeVerticiesColor_Vector(_transition_verticies,false);
     }
-
+    
+#pragma mark - POSING ROTATE
+    void PAMManifold::startPosingRotate(CGLA::Vec3f touchPoint, float angle)
+    {
+        if (createPivotPoint(touchPoint)) {
+            _transformed_verticies.clear();
+            _transition_verticies.clear();
+            _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+            set<VertexID> returnSet;
+            Walker bigger = biggerSide(_pivotHalfEdgeID,returnSet);
+            setTransformedAreaForPosingRotate(bigger);
+            modState = Modification::BRANCH_POSE_ROTATE;
+        }
+    }
+    
+    void PAMManifold::continuePosingRotate(float angle)
+    {
+        _rotAngle = angle;
+    }
+    
+    void PAMManifold::endPosingRotate(float angle)
+    {
+        if (modState != Modification::BRANCH_POSE_ROTATE) {
+            return;
+        }
+        
+//        [self saveState];
+        
+        modState = Modification::NONE;
+        
+        _rotAngle = angle;
+        
+        Vec3f zAxis = invert_affine(viewMatrix).mul_3D_vector(Vec3f(0, 0, -1));
+        Mat4x4f toOrigin = translation_Mat4x4f(-1*_centerOfRotation);
+        Mat4x4f rotMatrix = rotation_Mat4x4f(zAxis, -1*angle);
+        Mat4x4f fromOrigin = translation_Mat4x4f(_centerOfRotation);
+        Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+        
+        for (VertexID vID: _transformed_verticies) {
+            pos(vID) = tMatrix.mul_3D_point(pos(vID));
+        }
+        
+        //deformable area
+        map<int,Mat4x4f> rotMatricies;
+        for (auto lid: _loopsToDeform) {
+            float weight = _ringToDeformValue[lid];
+            float angle = weight * _rotAngle;
+            Mat4x4f rotMatrix = rotation_Mat4x4f(zAxis, -1*angle);
+            Mat4x4f tMatrix = fromOrigin * rotMatrix * toOrigin;
+            rotMatricies[lid]=tMatrix;
+        }
+        
+        for (auto it = _vertexToLoop.begin(); it!=_vertexToLoop.end(); ++it) {
+            VertexID vid = it->first;
+            int lid = it->second;
+            Mat4x4f tMatrix = rotMatricies[lid];
+            pos(vid) = tMatrix.mul_3D_point(pos(vid));
+        }
+        
+        //    [self rotateRingsFrom:_deformDirHalfEdge toRingID:_deformDirHalfEdgeEnd smooth:0];
+                 
+        updateVertexPositionOnGPU_Set(_transformed_verticies);
+        updateVertexNormOnGPU_Set(_transformed_verticies);
+        changeVerticiesColor_Set(_transformed_verticies,false);
+        
+        updateVertexPositionOnGPU_Vector(_transition_verticies);
+        updateVertexNormOnGPU_Vector(_transition_verticies);
+        changeVerticiesColor_Vector(_transition_verticies,false);
+    }
+    
+    //Checks with direction from to the left or right of the rib loop is smaller
+    HMesh::Walker PAMManifold::biggerSide(HMesh::HalfEdgeID ribLoop, std::set<HMesh::VertexID>& returnSet)
+    {
+        Walker dir = this->walker(ribLoop).next();
+        Walker oppDir = dir.opp().next().opp().next();
+        
+        //Flood rotational area in both ways
+        HalfEdgeAttributeVector<EdgeInfo> sEdgeInfo(allocated_halfedges());
+        Walker bWalker = walker(dir.next().halfedge()); //Walk along pivot boundary loop
+        Walker opp_bWalker = walker(oppDir.next().halfedge()); //Walk along pivot boundary loop
+        queue<HalfEdgeID> hq;
+        queue<HalfEdgeID> opp_hq;
+        
+        for (;!bWalker.full_circle(); bWalker = bWalker.next().opp().next()) {
+            HalfEdgeID hID = bWalker.next().halfedge();
+            HalfEdgeID opp_hID = bWalker.next().opp().halfedge();
+            sEdgeInfo[hID] = EdgeInfo(SPINE, 0);
+            sEdgeInfo[opp_hID] = EdgeInfo(SPINE, 0);
+            hq.push(hID);
+        }
+        
+        for (;!opp_bWalker.full_circle(); opp_bWalker = opp_bWalker.next().opp().next()) {
+            HalfEdgeID hID = opp_bWalker.next().halfedge();
+            HalfEdgeID opp_hID = opp_bWalker.next().opp().halfedge();
+            sEdgeInfo[hID] = EdgeInfo(SPINE, 0);
+            sEdgeInfo[opp_hID] = EdgeInfo(SPINE, 0);
+            opp_hq.push(hID);
+        }
+        
+        set<VertexID> floodVerticiesSet;
+        set<VertexID> opp_floodVerticiesSet;
+        
+        while(!hq.empty() && !opp_hq.empty())
+        {
+            HalfEdgeID h = hq.front();
+            Walker w = walker(h);
+            hq.pop();
+            bool is_spine = edgeInfo[h].edge_type == SPINE;
+            for (;!w.full_circle(); w=w.circulate_vertex_ccw(),is_spine = !is_spine) {
+                if(sEdgeInfo[w.halfedge()].edge_type == UNKNOWN)
+                {
+                    EdgeInfo ei = is_spine ? EdgeInfo(SPINE,0) : EdgeInfo(RIB,0);
+                    
+                    floodVerticiesSet.insert(w.vertex());
+                    floodVerticiesSet.insert(w.opp().vertex());
+                    
+                    sEdgeInfo[w.halfedge()] = ei;
+                    sEdgeInfo[w.opp().halfedge()] = ei;
+                    hq.push(w.opp().halfedge());
+                }
+            }
+            
+            h = opp_hq.front();
+            w = walker(h);
+            opp_hq.pop();
+            is_spine = edgeInfo[h].edge_type == SPINE;
+            for (;!w.full_circle(); w=w.circulate_vertex_ccw(),is_spine = !is_spine) {
+                if(sEdgeInfo[w.halfedge()].edge_type == UNKNOWN)
+                {
+                    EdgeInfo ei = is_spine ? EdgeInfo(SPINE,0) : EdgeInfo(RIB,0);
+                    
+                    opp_floodVerticiesSet.insert(w.vertex());
+                    opp_floodVerticiesSet.insert(w.opp().vertex());
+                    
+                    sEdgeInfo[w.halfedge()] = ei;
+                    sEdgeInfo[w.opp().halfedge()] = ei;
+                    opp_hq.push(w.opp().halfedge());
+                }
+            }
+        }
+        
+        if (hq.empty()) {
+            returnSet = floodVerticiesSet;
+            return oppDir;
+        } else {
+            returnSet = opp_floodVerticiesSet;
+            return dir;
+        }
+    }
+    
+//#pragma mark - POSING TRANSLATE
+//    void PAMManifold::statePosingTranslateWithTouchPoint(CGLA::Vec3f touchPoint, CGLA::Vec3f translation)
+//    {
+//        if (createPivotPoint(touchPoint))
+//        {
+//            _transformed_verticies.clear();
+//            _transition_verticies.clear();
+//            _current_rot_position = VertexAttributeVector<Vec3f>(no_vertices());
+//            _translationStart = translation;
+//            _translationCurrent = translation - _translationStart;
+//            
+//            Walker bigger = biggerSide(_pivotHalfEdgeID,_transformed_verticies);
+//            
+//            _deformDirHalfEdge = bigger.opp().next().opp().next().halfedge();
+//            changeVerticiesColor_Set(_transformed_verticies,true);
+//            modState = Modification::BRANCH_POSE_TRANSLATE;
+//        }
+//    }
+//    
+//    void PAMManifold::continuePosingTranslate(CGLA::Vec3f translation)
+//    {
+//        _translationCurrent = translation - _translationStart;
+//    }
+    
 #pragma mark -  UPDATE GPU DATA
     
     void PAMManifold::updateVertexPositionOnGPU_Vector(std::vector<HMesh::VertexID>& verticies)

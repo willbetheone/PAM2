@@ -76,7 +76,6 @@ namespace PAMMesh
             BRANCH_POSE_TRANSLATE
         };
         Modification modState;
-
         
 #pragma mark - BODY CREATION
         bool createBody(std::vector<CGLA::Vec3f>& polyline1,
@@ -127,6 +126,16 @@ namespace PAMMesh
         void startTranslatingBranchTree(CGLA::Vec3f touchPoint, CGLA::Vec3f translation);
         void continueTranslatingBranchTree(CGLA::Vec3f translation);
         void endTranslatingBranchTree(CGLA::Vec3f translation);
+
+#pragma mark - POSING ROTATE
+        void startPosingRotate(CGLA::Vec3f touchPoint, float angle);
+        void continuePosingRotate(float angle);
+        void endPosingRotate(float angle);
+        
+//#pragma mark - POSING_TRANSLATE
+//        void statePosingTranslateWithTouchPoint(CGLA::Vec3f touchPoint, CGLA::Vec3f translation);
+//        void continuePosingTranslate(CGLA::Vec3f translation);
+//        void endPosingTranslate(CGLA::Vec3f translation);
 
     private:
         
@@ -184,12 +193,12 @@ namespace PAMMesh
                            CGLA::Vec4uc*& wireframeColor,
                            std::vector<unsigned int>*& wireframeIndicies);
         
-#pragma mark - BODY CREATION
+#pragma mark - BODY CREATION UTILITIES
         void populateManifold(std::vector<std::vector<CGLA::Vec3f>>& allRibs);
         
         int indexForCentroid(int centeroid, int rib, int totalCentroid, int totalRib);
 
-#pragma mark - BRANCH CREATION
+#pragma mark - BRANCH CREATION UTILITIES
         int branchWidthForAngle(float angle, HMesh::VertexID vID);
         
         bool createHoleAtVertex(HMesh::VertexID vID,int width,HMesh::VertexID& newPoleID,float& bWidth,
@@ -210,9 +219,10 @@ namespace PAMMesh
         
         int limbIndexForCentroid(int centeroid,int rib,int totalCentroid, int totalRib);
 
-#pragma mark - PIVOT POINT METHODS
+#pragma mark - PIVOT POINT UTILITIES
         bool toPivotFromPinDirection(HMesh::HalfEdgeID& toPivothID);
         bool setTransformedArea();
+        bool setTransformedAreaForPosingRotate(HMesh::Walker& awayFromTransform);
         
 #pragma mark - UTILITIES
         bool closestVertexID_3D(const CGLA::Vec3f& point, HMesh::VertexID& vid);
@@ -223,8 +233,11 @@ namespace PAMMesh
         
         std::set<HMesh::VertexID> allVerticiesInDirection(HMesh::Walker deleteDir);
 
-#pragma mark - ROTATING THE BRANCH TREE
+#pragma mark - ROTATING THE BRANCH TREE UTILITIES
         void rotateRingsFrom(HMesh::HalfEdgeID pivotDirHID, HMesh::HalfEdgeID pivotHalfEdge);
+        
+#pragma mark - POSING UTILITIES
+        HMesh::Walker biggerSide(HMesh::HalfEdgeID ribLoop, std::set<HMesh::VertexID>& returnSet);
 
 #pragma mark - SMOOTHING
         void neighbours(std::set<HMesh::VertexID>& neighbours, std::vector<HMesh::VertexID>& verticies, float brush_size);
