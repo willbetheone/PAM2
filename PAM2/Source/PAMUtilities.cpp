@@ -14,6 +14,8 @@ using namespace std;
 using namespace CGLA;
 using namespace RAEngine;
 
+#define SHOULD LOG 0
+
 namespace PAMMesh
 {
     bool getRibWidths(const std::vector<CGLA::Vec2f>& line1,

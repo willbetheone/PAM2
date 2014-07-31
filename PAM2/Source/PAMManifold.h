@@ -90,10 +90,9 @@ namespace PAMMesh
                         bool debug);
         
 #pragma mark - BRANCH CREATION
-        bool createBranch(std::vector<CGLA::Vec3f> touchPoints,
+        bool createBranch(std::vector<CGLA::Vec3f>& touchPoints,
                           CGLA::Vec3f firstPoint,
                           bool touchedModel,
-                          float touchSize,
                           float angularWidth);
 
 #pragma mark - BUMP CREATION
@@ -103,10 +102,11 @@ namespace PAMMesh
         
 #pragma mark - RIB SCALING
         void startScalingSingleRib(CGLA::Vec3f touchPoint,
-                                   bool secondPointOnTheModel,
+                                   CGLA::Vec3f touchPoint1, // used for side scaling
                                    float scale,
                                    float touchSize,
-                                   bool anisotropic);
+                                   bool anisotropic,
+                                   bool sculptSide);
         void changeScalingSingleRib(float scale);
         void endScalingSingleRib(float scale);
 
@@ -207,7 +207,7 @@ namespace PAMMesh
         
         //BUMP CREATION VARS
         float _bumpBrushDepth;
-        CGLA::Vec3d _bumpDirection;
+        CGLA::Vec3f _bumpDirection;
         std::set<HMesh::VertexID> _bump_verticies;
         HMesh::VertexAttributeVector<int> _bump_current_displacement_vid_is_set;
         HMesh::VertexAttributeVector<float> _bump_verticies_weigths;
@@ -223,8 +223,8 @@ namespace PAMMesh
         HMesh::HalfEdgeID _deleteBranchSecondRingEdge;
         int _deleteBranchNumberOfBoundaryRibs;
         HMesh::VertexID _newAttachVertexID;
-        Vec _zRotateVec;
-        Vec _zRotatePos;
+        CGLA::Vec3f _zRotateVec;
+        CGLA::Vec3f _zRotatePos;
         
         //CLONING
         HMesh::HalfEdgeID _cloningDirection;

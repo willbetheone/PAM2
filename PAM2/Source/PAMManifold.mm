@@ -15,7 +15,6 @@
 #include "../HMesh/obj_load.h"
 #include "RAPolylineUtilities.h"
 #include "Quatf.h"
-#include "Quatd.h"
 #include "PAMUtilities.h"
 #include "polarize.h"
 #include "Mat3x3d.h"
@@ -334,6 +333,7 @@ namespace PAMMesh
         }
         else if (modState == Modification::SCULPTING_BUMP_CREATION)
         {
+            RA_LOG_VERBOSE("START UPDATING BUMP VERTICIES");
             for (VertexID vid: _bump_verticies)
             {
                 float weight = _bump_verticies_weigths[vid];
@@ -343,7 +343,7 @@ namespace PAMMesh
                 } else {
                     depth = -1*(_bumpBrushDepth - 1);
                 }
-                _bump_current_displacement[vid] = Vec3f(pos(vid) + depth*_bumpDirection*weight);
+                _bump_current_displacement[vid] = posf(vid) + depth*_bumpDirection*weight;
             }
             
             for (VertexID v: _bump_verticies)
@@ -408,6 +408,8 @@ namespace PAMMesh
             }
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+            RA_LOG_VERBOSE("END UPDATING BUMP VERTICIES");
         }
         else if (modState == Modification::BRANCH_ROTATION)
         {
@@ -529,15 +531,15 @@ namespace PAMMesh
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         }
         else if (modState == Modification::BRANCH_DETACHED_ROTATE) {
-            CGLA::Quatd q;
+            CGLA::Quatf q;
             q.make_rot(-_rotAngle, _zRotateVec);
             
             for (VertexID vid: _detached_verticies) {
-                Vec p = pos(vid);
+                Vec3f p = posf(vid);
                 p -= _zRotatePos;
                 p = q.apply(p);
                 p += _zRotatePos;
-                _current_rot_position[vid] = Vec3f(p);
+                _current_rot_position[vid] = p;
             }
             
             positionDataBuffer->bind();
@@ -550,15 +552,15 @@ namespace PAMMesh
             glUnmapBufferOES(GL_ARRAY_BUFFER);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
         } else if (modState == Modification::BRANCH_CLONE_ROTATION) {
-            CGLA::Quatd q;
+            CGLA::Quatf q;
             q.make_rot(-_rotAngle, _zRotateVec);
             
             for (VertexID vid: _cloned_verticies) {
-                Vec p = pos(vid);
+                Vec3f p = posf(vid);
                 p -= _zRotatePos;
                 p = q.apply(p);
                 p += _zRotatePos;
-                _current_rot_position[vid] = Vec3f(p);;
+                _current_rot_position[vid] = p;;
             }
 
             positionDataBuffer->bind();
@@ -1293,10 +1295,9 @@ namespace PAMMesh
 
 #pragma mark - BRANCH CREATION
     
-    bool PAMManifold::createBranch(std::vector<CGLA::Vec3f> touchPoints,
+    bool PAMManifold::createBranch(std::vector<CGLA::Vec3f>& touchPoints,
                                    CGLA::Vec3f firstPoint,
                                    bool touchedModelStart,
-                                   float touchSize,
                                    float angularWidth)
                                             
     {
@@ -2014,9 +2015,9 @@ namespace PAMMesh
     {
         VertexID touchedVID;
         closestVertexID_3D(touchPoint, touchedVID);
-        Vec touchedPos = pos(touchedVID);
-        Vec norm = HMesh::normal(*this, touchedVID);
-        Vec displace = 0.05*norm;
+        Vec3f touchedPos = posf(touchedVID);
+        Vec3f norm = HMesh::normalf(*this, touchedVID);
+        Vec3f displace = 0.05*norm;
         
         _bumpDirection = displace;
         _bumpBrushDepth = brushDepth;
@@ -2028,19 +2029,19 @@ namespace PAMMesh
         
         vector<VertexID> oneVertex;
         oneVertex.push_back(touchedVID);
-        neighbours(_bump_verticies, oneVertex,brushSize);
+        neighbours(_bump_verticies, oneVertex, brushSize);
         
         for (VertexID vid: _bump_verticies)
         {
-            double l = (touchedPos - pos(vid)).length();
-            float x = l/brushSize;
-            if (x <= 1) {
+            float l = (touchedPos - posf(vid)).length();
+            float x = l / brushSize;
+            if (x <= 1)
+            {
                 float weight = pow(pow(x,2)-1, 2);
                 _bump_verticies_weigths[vid] = weight;
             }
             _bump_current_displacement_vid_is_set[vid] = 1;
         }
-        //    [self changeVerticiesColor_Set:_bump_verticies toSelected:YES];
         modState = Modification::SCULPTING_BUMP_CREATION;
     }
     
@@ -2051,7 +2052,17 @@ namespace PAMMesh
     
     void PAMManifold::endBumpCreation()
     {
-//        [self saveState];
+        for (VertexID vid: _bump_verticies)
+        {
+            float weight = _bump_verticies_weigths[vid];
+            float depth;
+            if (_bumpBrushDepth < 1) {
+                depth = 1 - _bumpBrushDepth;
+            } else {
+                depth = -1*(_bumpBrushDepth - 1);
+            }
+            _bump_current_displacement[vid] = posf(vid) + depth*_bumpDirection*weight;
+        }
         
         for (VertexID vid: _bump_verticies)
         {
@@ -2067,10 +2078,11 @@ namespace PAMMesh
     
 #pragma mark - RIB SCALING
     void PAMManifold::startScalingSingleRib(CGLA::Vec3f touchPoint,
-                                            bool secondPointOnTheModel,
+                                            CGLA::Vec3f touchPoint1, // used for side scaling
                                             float scale,
                                             float touchSize,
-                                            bool anisotropic)
+                                            bool anisotropic,
+                                            bool sculptSide)
     {
         VertexID vID;
         if (!closestVertexID_3D(touchPoint, vID)) {
@@ -2107,6 +2119,7 @@ namespace PAMMesh
             if (is_pole(*this, upWalker.vertex())) {
                 break;
             }
+            
             HalfEdgeID ribID = upWalker.next().halfedge();
             _edges_to_scale.push_back(ribID);
             vector_vid = verticies_along_the_rib(*this, ribID, edgeInfo);
@@ -2130,11 +2143,27 @@ namespace PAMMesh
         Vec3f silhouette = origin;
         silhouette_Verticies.push_back(silhouette);
         
+        Vec3f sideVector;
+        Mat4x4f mvMatrix = getModelViewMatrix();
+        Mat4x4f imvMatrix = invert_affine(mvMatrix);
+        if (sculptSide)
+        {
+            Vec3f toCameraCenter = mvMatrix.mul_3D_point(centroid_for_rib(*this, ribID));
+            Vec3f toCameraTouchPoint = viewMatrix.mul_3D_point(touchPoint1);
+            toCameraTouchPoint[2] = toCameraCenter[2];
+            sideVector = toCameraTouchPoint - toCameraCenter;
+            sideVector = imvMatrix.mul_3D_vector(sideVector);
+        }
+        
+        
+        
         distance = (origin - posf(downWalker.vertex())).length();
-        while (distance <= brushSize) {
+        while (distance <= brushSize)
+        {
             if (is_pole(*this, downWalker.vertex())) {
                 break;
             }
+            
             HalfEdgeID ribID = downWalker.next().halfedge();
             _edges_to_scale.push_back(ribID);
             vector_vid = verticies_along_the_rib(*this, ribID, edgeInfo);
@@ -2180,51 +2209,45 @@ namespace PAMMesh
             
             for(int i = 0; i < _centroids.size(); i++)
             {
-                Vec3d center = Vec3d(_centroids[i]);
+                Vec3f center = _centroids[i];
                 vector<VertexID> verticies = verticies_along_ribs[i];
                 
-                Mat3x3d cov(0);
+                
+                Mat3x3f cov(0);
                 for (int i = 0; i < verticies.size(); i++) {
                     VertexID vID = verticies[i];
-                    Vec3d p = pos(vID);
-                    Vec3d d = p - center;
-                    Mat3x3d m;
+                    Vec3f p = posf(vID);
+                    Vec3f d = p - center;
+                    Mat3x3f m;
                     outer_product(d,d,m);
                     cov += m;
                 }
                 
-                Mat3x3d Q, L;
+                Mat3x3f Q, L;
                 int sol = power_eigensolution(cov, Q, L);
                 
-                Vec3d n;
                 assert(sol >= 2);
-                n = normalize(cross(Q[0],Q[1]));
-                
-                Vec3f nGLK = Vec3f(n);
-                Vec3f nGLKWorld = getModelViewMatrix().mul_3D_vector(nGLK);
+                Vec3f n = normalize(cross(Q[0],Q[1]));
+                Vec3f nGLKWorld = mvMatrix.mul_3D_vector(n);
                 Vec3f zWorld = Vec3f(0, 0, 1);
                 Vec3f to_silhouette_axis_world = cross(zWorld, nGLKWorld);
-                
-                Vec3f to_silhouette_axis_model = invert_affine(getModelViewMatrix()).mul_3D_vector(to_silhouette_axis_world);
-                to_silhouette_axis_model = normalize(to_silhouette_axis_model);
-                Vec to_silhouette_axis = Vec(to_silhouette_axis_model[0],
-                                             to_silhouette_axis_model[1],
-                                             to_silhouette_axis_model[2]);
-                
+                Vec3f to_silhouette_axis = normalize(imvMatrix.mul_3D_vector(to_silhouette_axis_world));
                 HalfEdgeID ribID = _edges_to_scale[i];
+                
                 for (Walker w = walker(ribID); !w.full_circle(); w = w.next().opp().next())
                 {
-                    Vec p = pos(w.vertex()) - center;
+                    Vec3f p = posf(w.vertex()) - center;
                     float c = dot(p, to_silhouette_axis)/dot(to_silhouette_axis, to_silhouette_axis);
-                    Vec proj = c * to_silhouette_axis;
-                    if (secondPointOnTheModel) {
-                        Vec toOrg = Vec(origin) - Vec(center);
-                        if (dot(toOrg, proj) > 0) {
-                            proj = Vec(0,0,0);
+                    Vec3f proj = c * to_silhouette_axis;
+                    if (sculptSide)
+                    {
+//                        Vec3f toOrg = origin - center;
+                        if (dot(sideVector, proj) < 0) {
+                            proj = Vec3f(0,0,0);
                         }
                     }
                     
-                    _anisotropic_projections[w.vertex()] = Vec3f(proj);
+                    _anisotropic_projections[w.vertex()] = proj;
                 }
             }
         }
@@ -2533,7 +2556,7 @@ namespace PAMMesh
         _centerOfRotation = centroid_for_rib(*this, _pivotHalfEdgeID, edgeInfo);
         
         //Assign weight deformation for angle to the loops
-        int s = ceil(loopsToDeform.size()/2);
+//        int s = ceil(loopsToDeform.size()/2);
         for (int i = 0; i < loopsToDeform.size(); i++) {
             int lID = loopsToDeform[i];
             float r = loopsToDeform.size();
@@ -2581,9 +2604,7 @@ namespace PAMMesh
         if (modState != Modification::BRANCH_ROTATION) {
             return;
         }
-        
-//        [self saveState];
-        
+
         Vec3f zAxis = invert_affine(viewMatrix).mul_3D_vector(Vec3f(0, 0, -1));
         Mat4x4f toOrigin = translation_Mat4x4f(-1*_centerOfRotation);
         Mat4x4f rotMatrix = rotation_Mat4x4f(zAxis, -1*angle);
@@ -3173,28 +3194,28 @@ namespace PAMMesh
         }
         
         _newAttachVertexID = touchVID ;
-        Vec touchPos = pos(touchVID);
-        Vec normal = HMesh::normal(*this, touchVID);
+        Vec3f touchPos = posf(touchVID);
+        Vec3f normall = HMesh::normalf(*this, touchVID);
         
-        Vec boundaryCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo));
-        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo));
-        Vec toTouchPos = touchPos - boundaryCentroid;
+        Vec3f boundaryCentroid = centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo);
+        Vec3f secondRingCentroid = centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo);
+        Vec3f toTouchPos = touchPos - boundaryCentroid;
         secondRingCentroid += toTouchPos;
         for (VertexID vid: _detached_verticies) {
-            pos(vid) = pos(vid) + toTouchPos;
+            pos(vid) = pos(vid) + Vec(toTouchPos);
         }
         
-        Vec currentNorm = secondRingCentroid - touchPos;
+        Vec3f currentNorm = secondRingCentroid - touchPos;
         
-        CGLA::Quatd q;
-        q.make_rot(normalize(currentNorm), normalize(normal));
+        CGLA::Quatf q;
+        q.make_rot(normalize(currentNorm), normalize(normall));
         
         for (VertexID vid: _detached_verticies) {
-            Vec p = pos(vid);
+            Vec3f p = posf(vid);
             p -= touchPos;
             p = q.apply(p);
             p += touchPos;
-            pos(vid) = p;
+            pos(vid) = Vec(p);
         } 
         
         updateVertexPositionOnGPU_Set(_detached_verticies);
@@ -3333,15 +3354,15 @@ namespace PAMMesh
         }
         
         _rotAngle = angle;
-        Vec boundaryCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo));
-        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo));
-        Vec boundaryBodyCentroid = Vec(centroid_for_boundary_rib(*this, _deleteBodyUpperRibEdge, edgeInfo));
-        Vec currentNorm;
+        Vec3f boundaryCentroid = centroid_for_boundary_rib(*this, _deleteBranchLowerRibEdge, edgeInfo);
+        Vec3f secondRingCentroid = centroid_for_rib(*this, _deleteBranchSecondRingEdge, edgeInfo);
+        Vec3f boundaryBodyCentroid = centroid_for_boundary_rib(*this, _deleteBodyUpperRibEdge, edgeInfo);
+        Vec3f currentNorm;
         if (modState == Modification::BRANCH_DETACHED) {
             currentNorm = boundaryCentroid - boundaryBodyCentroid;
             _zRotatePos = boundaryBodyCentroid;
         } else if (modState == Modification::BRANCH_DETACHED_AN_MOVED) {
-            Vec touchPos = pos(_newAttachVertexID);
+            Vec3f touchPos = posf(_newAttachVertexID);
             currentNorm = secondRingCentroid - touchPos;
             _zRotatePos = touchPos;
         }
@@ -3363,15 +3384,15 @@ namespace PAMMesh
         _rotAngle = angle;
         modState = _prevMod;
         
-        CGLA::Quatd q;
+        CGLA::Quatf q;
         q.make_rot(-_rotAngle, _zRotateVec);
         
         for (VertexID vid: _detached_verticies) {
-            Vec p = pos(vid);
+            Vec3f p = posf(vid);
             p -= _zRotatePos;
             p = q.apply(p);
             p += _zRotatePos;
-            pos(vid) = p;
+            pos(vid) = Vec(p);
         }
     }
 
@@ -3473,8 +3494,8 @@ namespace PAMMesh
         }
 
         closestVertexID_3D(touchPoint, _newClonedVertexID);
-        Vec touchPos = pos(_newClonedVertexID);
-        Vec normal = HMesh::normal(*this, _newClonedVertexID);
+        Vec3f touchPos = posf(_newClonedVertexID);
+        Vec3f normal = HMesh::normalf(*this, _newClonedVertexID);
         
         //check if you can possible move here
         int numRibSegments = count_rib_segments(*this, edgeInfo, _newClonedVertexID);
@@ -3502,10 +3523,10 @@ namespace PAMMesh
         _cloned_verticies.clear();
         allVerticiesAndHalfEdges(_cloned_verticies,newEdges,w.vertex());
         
-        Vec boundaryCentroid = Vec(centroid_for_rib(*this, _cloningBodyUpperRibEdge, edgeInfo));
-        Vec toTouchPos = touchPos - boundaryCentroid;
+        Vec3f boundaryCentroid = centroid_for_rib(*this, _cloningBodyUpperRibEdge, edgeInfo);
+        Vec3f toTouchPos = touchPos - boundaryCentroid;
         for (VertexID vid: _cloned_verticies) {
-            pos(vid) += toTouchPos;
+            pos(vid) += Vec(toTouchPos);
         }
         
         if (!boundaryHalfEdgeForClonedMesh(_cloningBranchLowerRibEdge,newEdges)) {
@@ -3527,19 +3548,18 @@ namespace PAMMesh
         Walker toSecondRing = walker(_cloningBranchLowerRibEdge);
         toSecondRing = toSecondRing.next().next().opp().next().next().opp();
         _cloningSecondRing = toSecondRing.halfedge();
-        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _cloningSecondRing));
+        Vec3f secondRingCentroid = centroid_for_rib(*this, _cloningSecondRing);
+        Vec3f currentNorm = secondRingCentroid - touchPos;
         
-        Vec currentNorm = secondRingCentroid - touchPos;
-        
-        CGLA::Quatd q;
+        CGLA::Quatf q;
         q.make_rot(normalize(currentNorm), normalize(normal));
         
         for (VertexID vid: _cloned_verticies) {
-            Vec p = pos(vid);
+            Vec3f p = posf(vid);
             p -= touchPos;
             p = q.apply(p);
             p += touchPos;
-            pos(vid) = p;
+            pos(vid) = Vec(p);
         }
         
         bufferVertexDataToGPU();
@@ -3687,8 +3707,8 @@ namespace PAMMesh
         
         _rotAngle = angle;
         
-        Vec secondRingCentroid = Vec(centroid_for_rib(*this, _cloningSecondRing));
-        Vec touchPos = pos(_newClonedVertexID);
+        Vec3f secondRingCentroid = centroid_for_rib(*this, _cloningSecondRing);
+        Vec3f touchPos = posf(_newClonedVertexID);
         _zRotatePos = touchPos;
         _zRotateVec = secondRingCentroid - touchPos;;
         _prevMod = modState;
@@ -3708,15 +3728,15 @@ namespace PAMMesh
         _rotAngle = angle;
         modState = _prevMod;
         
-        CGLA::Quatd q;
+        CGLA::Quatf q;
         q.make_rot(-_rotAngle, _zRotateVec);
         
         for (VertexID vid: _cloned_verticies) {
-            Vec p = pos(vid);
+            Vec3f p = posf(vid);
             p -= _zRotatePos;
             p = q.apply(p);
             p += _zRotatePos;
-            pos(vid) = p;
+            pos(vid) = Vec(p);
         }
         modState = Modification::BRANCH_COPIED_AND_MOVED_THE_CLONE;
     }
@@ -3751,6 +3771,7 @@ namespace PAMMesh
     
     void PAMManifold::updateVertexPositionOnGPU_Set(std::set<HMesh::VertexID>& verticies)
     {
+        RA_LOG_VERBOSE("S-UPDATING VERTEX POSTIONS ON GPU");
         positionDataBuffer->bind();
         unsigned char* tempVerticies = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
         for (VertexID vid: verticies) {
@@ -3760,10 +3781,12 @@ namespace PAMMesh
         }
         glUnmapBufferOES(GL_ARRAY_BUFFER);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        RA_LOG_VERBOSE("E-UPDATING VERTEX POSTIONS ON GPU");
     }
     
     void PAMManifold::updateVertexNormOnGPU_Set(std::set<HMesh::VertexID>& verticies)
     {
+        RA_LOG_VERBOSE("S-UPDATING NORMS ON GPU");
         normalDataBuffer->bind();
         unsigned char* tempNormal = (unsigned char*) glMapBufferOES(GL_ARRAY_BUFFER, GL_WRITE_ONLY_OES);
         for (VertexID vid: verticies) {
@@ -3773,6 +3796,7 @@ namespace PAMMesh
         }
         glUnmapBufferOES(GL_ARRAY_BUFFER);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        RA_LOG_VERBOSE("E-UPDATING NORMS ON GPU");
     }
     
     void PAMManifold::changeVerticiesColor_Vector(std::vector<HMesh::VertexID>& vertecies, CGLA::Vec4uc selectColor)

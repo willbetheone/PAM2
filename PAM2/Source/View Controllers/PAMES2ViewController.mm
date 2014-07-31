@@ -462,7 +462,6 @@ using namespace RAEngine;
                 bool result = pamManifold->createBranch(polyline1Data,
                                                         firstPoint,
                                                         isFirsPointOnAModel,
-                                                        [self touchSize],
                                                         PAMSettingsManager::getInstance().branchWidth);
                 if (!result) {
                     [self popSaved];
@@ -727,8 +726,9 @@ using namespace RAEngine;
     {
         GestureState state = [self gestureStateForRecognizer:sender];
         zoomManager->handlePinchGesture(state, sender.scale);
-    } else {
-        
+    }
+    else
+    {
         if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET ||
             pamManifold->modState == PAMManifold::Modification::BRANCH_SCALING)
         {
@@ -789,7 +789,7 @@ using namespace RAEngine;
                     //on of the fingers touched background. Start scaling.
                     if (depth1 < 0 && depth2 < 0)
                     {
-                        Vec3f model;
+                        
                         Vec2f middlePoint = 0.5f * (Vec2f(touchPoint1.x, touchPoint1.y) +
                                                     Vec2f(touchPoint2.x, touchPoint2.y));
                         float depth = [self depthForPoint:CGPointMake(floorf(middlePoint[0]), floorf(middlePoint[1]))
@@ -797,20 +797,23 @@ using namespace RAEngine;
                         if (depth < 0) {
                             return;
                         }
+                        Vec3f model;
                         [self modelCoordinates:model forTouchPoint:Vec3f(middlePoint, depth)];
-                        pamManifold->startScalingSingleRib(model, false, sender.scale, touchSize, anisotropic);
+                        pamManifold->startScalingSingleRib(model, Vec3f{}, sender.scale, touchSize, anisotropic, false);
                     }
                     else if (depth1 < 0)
                     {
-                        Vec3f model;
+                        Vec3f model, model2;
                         [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint2.x, touchPoint2.y, depth2)];
-                        pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
+                        [self modelCoordinates:model2 forTouchPoint:Vec3f(touchPoint1.x, touchPoint1.y, depth2)];
+                        pamManifold->startScalingSingleRib(model, model2, sender.scale, touchSize, anisotropic, true);
                     }
                     else
                     {
-                        Vec3f model;
+                        Vec3f model, model2;
                         [self modelCoordinates:model forTouchPoint:Vec3f(touchPoint1.x, touchPoint1.y, depth1)];
-                        pamManifold->startScalingSingleRib(model, true, sender.scale, touchSize, anisotropic);
+                        [self modelCoordinates:model2 forTouchPoint:Vec3f(touchPoint2.x, touchPoint2.y, depth1)];
+                        pamManifold->startScalingSingleRib(model, model2, sender.scale, touchSize, anisotropic, true);
                     }
                 }
                 else if (depth1 >= 0 && depth2 >= 0)
@@ -855,6 +858,7 @@ using namespace RAEngine;
 }
 
 -(void)startBackupTimer {
+    return;
     _autoSave = [NSTimer timerWithTimeInterval:30
                                         target:self
                                       selector:@selector(backupSession)
@@ -921,50 +925,51 @@ using namespace RAEngine;
 
 #pragma mark - Offscreen buffer
 -(GLubyte*)renderToOffscreenDepthBuffer:(PAMManifold*) mesh {
-    //Preserve previous GL state
-    GLboolean wasBlendEnabled;
-    glGetBooleanv(GL_BLEND, &wasBlendEnabled);
-    
-    GLboolean wasDepthEnabled;
-    glGetBooleanv(GL_DEPTH_TEST, &wasDepthEnabled);
-    
-    GLfloat clearColor[4];
-    glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
-    
-    offScreenBuffer->bind();
-    glViewport(0, 0, _glWidth, _glHeight);
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-    
-    //    for (RAMesh* mesh : meshesArray) {
-    mesh->viewMatrix = viewMatrix;
-    mesh->projectionMatrix = projectionMatrix;
-    mesh->drawToDepthBuffer();
-    //    }
-    
-    GLubyte* pixelData = new GLubyte[4*_glWidth*_glHeight];
-    glReadPixels(0, 0, _glWidth, _glHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
-    
-    //Restore previous GL state
-    if (wasBlendEnabled) {
-        glEnable(GL_BLEND);
-    } else {
-        glDisable(GL_BLEND);
-    }
-    
-    if (wasDepthEnabled) {
+
+        //Preserve previous GL state
+        GLboolean wasBlendEnabled;
+        glGetBooleanv(GL_BLEND, &wasBlendEnabled);
+        
+        GLboolean wasDepthEnabled;
+        glGetBooleanv(GL_DEPTH_TEST, &wasDepthEnabled);
+        
+        GLfloat clearColor[4];
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
+        
+        offScreenBuffer->bind();
+        glViewport(0, 0, _glWidth, _glHeight);
         glEnable(GL_DEPTH_TEST);
-    } else {
-        glDisable(GL_DEPTH_TEST);
-    }
+        glDisable(GL_BLEND);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        
+        //    for (RAMesh* mesh : meshesArray) {
+        mesh->viewMatrix = viewMatrix;
+        mesh->projectionMatrix = projectionMatrix;
+        mesh->drawToDepthBuffer();
+        //    }
+        
+        GLubyte* pixelData = new GLubyte[4*_glWidth*_glHeight];
+        glReadPixels(0, 0, _glWidth, _glHeight, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+        
+        //Restore previous GL state
+        if (wasBlendEnabled) {
+            glEnable(GL_BLEND);
+        } else {
+            glDisable(GL_BLEND);
+        }
+        
+        if (wasDepthEnabled) {
+            glEnable(GL_DEPTH_TEST);
+        } else {
+            glDisable(GL_DEPTH_TEST);
+        }
+        
+        glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        
+        offScreenBuffer->unbind();
     
-    glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-    
-    offScreenBuffer->unbind();
-    
-    return pixelData;
+        return pixelData;
 }
 
 //Return depth value written int colorbuffer using shaders
@@ -1075,7 +1080,7 @@ using namespace RAEngine;
 
 -(float)touchSize
 {
-    return [self touchSizeForFingerSize:10];
+    return [self touchSizeForFingerSize:15];
 }
 
 -(float)touchSizeForFingerSize:(float)touchSizeMM
@@ -1084,7 +1089,7 @@ using namespace RAEngine;
     const float mmToPx = 2048.0f/240.0f; //2048 px for 240 mm for retina display
     float touchSizePx = touchSizeMM * mmToPx;
     
-    Vec3f modelCoord, modelCoord2, rayDir, rayDir2;
+    Vec3f modelCoord, modelCoord2;
     [self rayOrigin:modelCoord forTouchPoint:CGPointMake(touchSizePx, 0)];
     [self rayOrigin:modelCoord2 forTouchPoint:CGPointMake(0, 0)];
     
@@ -1116,7 +1121,8 @@ void clearVector(std::vector<C*>& inputvector)
     _undoQueue.push_back(undoMani);
 }
 
--(void)popSaved {
+-(void)popSaved
+{
     if (_undoQueue.size() > 0) {
         _undoQueue.pop_front();
     }
