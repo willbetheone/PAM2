@@ -157,14 +157,10 @@ using namespace RAEngine;
 //Load empty workspace
 -(void)loadEmptyMeshData
 {
-    bounds = {Vec3f(-1,-1,-1), Vec3f(1,1,1), Vec3f(0,0,0), 2*sqrtf(3.0f)/2.0f};
-    
+    float a = 1;
+    bounds = {Vec3f(-a,-a,-a), Vec3f(a,a,a), Vec3f(0,0,0), (2*a)*sqrtf(3.0f)/2.0f};
     GLfloat zNear = 1.0;
-    GLfloat newOriginZ = -1*(zNear + bounds.radius);
-    GLfloat curOriginZ = bounds.center[2];
-    
-    Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
-    viewVolumeCenter = tV + bounds.center;
+    viewVolumeCenter = Vec3f(0, 0, -1*(zNear + 10*bounds.radius));
     
     [self setupBoundingBox];
 }
@@ -319,6 +315,10 @@ using namespace RAEngine;
 
 -(void)handleSingleTapGesture:(UIGestureRecognizer*)sender
 {
+    if (![self modelIsLoaded]) {
+        return;
+    }
+    
     if (pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED ||
         pamManifold->modState == PAMManifold::Modification::BRANCH_DETACHED_AN_MOVED)
     {
@@ -359,6 +359,10 @@ using namespace RAEngine;
 
 -(void)handleDoubleTapGesture:(UIGestureRecognizer*)sender
 {
+    if (![self modelIsLoaded]) {
+        return;
+    }
+    
     Vec3f modelCoord;
     if (![self modelCoordinates:modelCoord forGesture:sender]) {
         RA_LOG_WARN("Touched background");
@@ -488,7 +492,7 @@ using namespace RAEngine;
         Vec3f axis(rayOrigin[0], rayOrigin[1], 0);
         
         GestureState state = [self gestureStateForRecognizer:sender];
-        translationManager->handlePanGesture(state, axis);
+        translationManager->handlePanGesture(state, /*(1.0f/zoomManager->getScaleFactor()) * */ axis);
     }
     else
     {
@@ -543,11 +547,11 @@ using namespace RAEngine;
                 {
                     pamManifold->enabled = true;
                     
-                    GLfloat zNear = 1.0;
-                    GLfloat newOriginZ = -1*(zNear + bounds.radius);
-                    GLfloat curOriginZ = bounds.center[2];
+//                    GLfloat zNear = 1.0;
+//                    GLfloat newOriginZ = -1*(zNear + bounds.radius);
+//                    GLfloat curOriginZ = bounds.center[2];
                     
-                    pamManifold->translate(Vec3f(0, 0, newOriginZ - curOriginZ));
+                    pamManifold->translate(viewVolumeCenter - bounds.center);
                     
                     [self setupBoundingBox];
                     
@@ -625,6 +629,10 @@ using namespace RAEngine;
 
 -(void)handleThreeFingerPanGesture:(UIPanGestureRecognizer*)sender
 {
+    if (![self modelIsLoaded]) {
+        return;
+    }
+    
     if (sender.state == UIGestureRecognizerStateEnded) {
         if (pamManifold->modState == PAMManifold::Modification::PIN_POINT_SET) {
             Vec3f rayOrigin;
@@ -853,12 +861,13 @@ using namespace RAEngine;
     }
 }
 
--(void)undoButtonClicked:(UIButton*)btn {
+-(void)undoButtonClicked:(UIButton*)btn
+{
     [self undo];
 }
 
--(void)startBackupTimer {
-    return;
+-(void)startBackupTimer
+{
     _autoSave = [NSTimer timerWithTimeInterval:30
                                         target:self
                                       selector:@selector(backupSession)
@@ -867,7 +876,8 @@ using namespace RAEngine;
     [[NSRunLoop mainRunLoop] addTimer:_autoSave forMode:NSDefaultRunLoopMode];
 }
 
--(void)stopBackupTimer {
+-(void)stopBackupTimer
+{
     [_autoSave invalidate];
 }
 
@@ -876,17 +886,21 @@ using namespace RAEngine;
 -(void)update
 {
     GLfloat aspect = (GLfloat)_glWidth / (GLfloat)_glHeight;
-    float scale = 1.0f/zoomManager->getScaleFactor();
-    float diam = bounds.radius * 2.0f;
+    float scale = 1.0f;
+//    float scale = 1.0f/zoomManager->getScaleFactor();
+//    float diam = bounds.radius * 2.0f;
     float rad = bounds.radius;
+    
+//    GLfloat zNear = 1.0;
+//    viewVolumeCenter = Vec3f(0, 0, -1*(zNear + 5*bounds.radius));
     
     GLfloat left = viewVolumeCenter[0] - rad*aspect*scale;
     GLfloat right = viewVolumeCenter[0] + rad*aspect*scale;
     GLfloat bottom = viewVolumeCenter[1] - rad*scale;
     GLfloat top = viewVolumeCenter[1] + rad*scale;
 
-    projectionMatrix = ortho_Mat4x4f(left, right, bottom, top, 1.0f, 1.0f + diam);
-    viewMatrix = translationManager->getTranslationMatrix() * rotManager->getRotationMatrix();
+    projectionMatrix = ortho_Mat4x4f(left, right, bottom, top, 1.0f, 1.0f + 20*rad);
+    viewMatrix = translationManager->getTranslationMatrix() * scaling_Mat4x4f(Vec3f(zoomManager->getScaleFactor())) * rotManager->getRotationMatrix();
 }
 
 -(void)glkView:(GLKView *)view drawInRect:(CGRect)rect
@@ -900,11 +914,11 @@ using namespace RAEngine;
         pamManifold->draw();
     }
     
-    if (boundingBox != nullptr) {
-        boundingBox->projectionMatrix = projectionMatrix;
-        boundingBox->viewMatrix = viewMatrix;
-        boundingBox->draw();
-    }
+//    if (boundingBox != nullptr) {
+//        boundingBox->projectionMatrix = projectionMatrix;
+//        boundingBox->viewMatrix = viewMatrix;
+//        boundingBox->draw();
+//    }
     
     polyline1->projectionMatrix = projectionMatrix;
     polyline1->viewMatrix = viewMatrix;
@@ -1194,6 +1208,7 @@ void clearVector(std::vector<C*>& inputvector)
 
 -(void)subdivide
 {
+    [self saveState];
     pamManifold->subdivide();
 }
 
@@ -1209,6 +1224,7 @@ void clearVector(std::vector<C*>& inputvector)
 
 -(void)globalSmoothing
 {
+    [self saveState];
     pamManifold->globalSmoothing();
 }
 
@@ -1340,16 +1356,14 @@ void clearVector(std::vector<C*>& inputvector)
         if (pamManifold->loadObjFile(lastPath.UTF8String))
         {
             pamManifold->enabled = true;
+
+            float a = 1;
+            bounds = {Vec3f(-a,-a,-a), Vec3f(a,a,a), Vec3f(0,0,0), (2*a)*sqrtf(3.0f)/2.0f};
+            GLfloat zNear = 1.0;
+            viewVolumeCenter = Vec3f(0, 0, -1*(zNear + 10*bounds.radius));
             
-            bounds = pamManifold->getBoundingBox();
-            
-            GLfloat zNear = 1.0f;
-            GLfloat newOriginZ = -1 * (zNear + bounds.radius);
-            GLfloat curOriginZ = bounds.center[2];
-            
-            Vec3f tV = Vec3f(0, 0, newOriginZ - curOriginZ);
-            pamManifold->translate(tV);
-            viewVolumeCenter = tV + bounds.center;
+            pamManifold->translate(viewVolumeCenter - bounds.center);
+
             [self setupBoundingBox];
         }
         

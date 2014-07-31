@@ -100,11 +100,12 @@ namespace RAEngine {
     
     void RAMesh::scale(Vec3 scale, Vec3 toPivot)
     {
-        Mat4x4 toOrigin = translation_Mat4x4f(toPivot);
-        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toPivot);
+//        Mat4x4 toOrigin = translation_Mat4x4f(toPivot);
+//        Mat4x4 fromOrigin = translation_Mat4x4f(-1 * toPivot);
         Mat4x4 scaleMat = scaling_Mat4x4f(scale);
         
-        scaleMatrix = fromOrigin * scaleMat * toOrigin * scaleMatrix;
+//        scaleMatrix = fromOrigin * scaleMat * toOrigin * scaleMatrix;
+        scaleMatrix = scaleMat;
     }
     
     int RAMesh::loadObjFile(const char* path)

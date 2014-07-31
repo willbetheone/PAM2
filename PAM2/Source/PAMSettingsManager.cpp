@@ -16,7 +16,7 @@ namespace PAMMesh
         showSkeleton = false;
         smoothingBrushSize = 1.0;
         baseSmoothingIterations = 15;
-        branchWidth = 40;
+        branchWidth = 60;
         spineSmoothing = true;
         poleSmoothing = true;
         sculptScalingType = ScultpScalingType::Silhouette;

@@ -250,7 +250,8 @@ using namespace PAMMesh;
         [dismissButton.titleLabel setFont:[UIFont systemFontOfSize:15.0f]];
         [contentView addSubview:dismissButton];
     }
-    contentView.contentSize = CGSizeMake(300, CGRectGetMaxY(contentView.frame));
+//    contentView.frame = CGRectMake(0, 0, 300, CGRectGetMaxY(_silhouetteScalingSculpt.frame));
+    contentView.contentSize = CGSizeMake(300, CGRectGetMaxY(_silhouetteScalingSculpt.frame)+30);
 }
 
 -(void)viewWillAppear:(BOOL)animated {
@@ -291,6 +292,7 @@ using namespace PAMMesh;
 -(void)globalSmoothing:(UIControl*)sender {
     [self.delegate globalSmoothing];
 }
+
 -(void)loadArmadillo:(UIControl*)sender {
     [self.delegate loadArmadillo];
 }
